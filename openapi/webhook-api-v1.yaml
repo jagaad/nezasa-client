@@ -1,0 +1,332 @@
+swagger: '2.0'
+info:
+  version: '1.0'
+  title: Webhook API
+  description: |
+    Webhooks allow you to build integrations that subscribe to a set of events from TripBuilder. When one of those events is triggered,
+    we'll send a HTTP POST payload to the webhook’s target URL which was provided in the webhook creation request. Webhooks can be used to update
+    an external CRM system, a back-office application, or trigger some post-booking processes. You're only limited by your imagination.
+
+    Webhooks can be created on a distribution channel level. Once created, the webhook will be triggered each time one or more subscribed events
+    occurs.
+
+    Following an event-based architecture, it is the responsibility of the webhook register entity to be available, receive and process events accordingly. 
+    There is no retry mechanism from the Nezasa Platform if an event fails delivery.
+
+    For details about authentication refer to the Booking API specification. https://support.nezasa.com/hc/en-gb/articles/4405877436817-Nezasa-APIs
+    Permission to manage webhooks is granted alongside permission to access the booking API. The API credentials are the same.
+
+    The supported character encoding is UTF-8. Line breaks are encoded as a single \n (0x0A) character.
+
+    # Events
+    When creating a webhook, you can choose which events you would like to receive payloads for.
+    You should only subscribe to events that are handled by your server to limit the number of HTTP requests.
+    You can change the list of subscribed events through the API anytime.
+
+    Available events are:
+
+    Name | Description
+    ----------------------------|-------------
+    `booking_completed`         | Triggered after booking of an itinerary has completed.
+    `booking_requested`         | Triggered when booking has been requested but could not be completed. We have started booking, however, for some reason could not complete the operation automatically and require manual intervention.
+    `cancellation_completed`    | Triggered after cancellation of an itinerary has completed.
+    `booking_change_initiated`  | Triggered after a booking change has been initiated and an alternative itinerary has been created.
+    `booking_change_completed`  | Triggered after a booking change has been completed.
+    `booking_change_requested`  | Triggered when a booking change has been requested but could not be completed. We have started booking (changed components), however, for some reason could not complete the operation automatically and require manual intervention.
+    `booking_modified`          | Triggered when a booking had been modified.
+    `pax_changed`               | Triggered after some PAX information changed (e.g. name changed). This can happen if a correction has to be made. A PAX change that impacts the structure of the booking (e.g. PAX added/removed) must trigger a booking change event and not this event here.
+    `payment_added`             | Triggered after a payment is added.
+    `payment_closed`            | Triggered after a payment is closed.
+    `payment_deleted`           | Triggered after a payment is deleted.
+    `refund_added`              | Triggered after a refund is added.
+    `refund_closed`             | Triggered after a refund is closed.
+    `refund_deleted`            | Triggered after a refund is deleted.
+    `ping`                      | Triggered when a new webhook is added or an existing webhook is updated. Useful for development / testing purpose only; can be ignored in production.
+
+    # Payloads
+    For details about the booking fields refer to the Booking API specification: https://support.nezasa.com/hc/en-gb/articles/4405877436817-Nezasa-APIs
+
+    ## Booking Completed and Requested Event
+    The event payload for the `booking_requested`, `booking_completed` and `booking_change_completed` event are identical, except for the event field's value:
+
+    Example:
+    ```
+    {
+      "event": "booking_completed"
+      "booking": {
+        "url": "https://api.tripbuilder.app/bookings/v1.13/idwegwefdwdt"
+        "tourOperator": "TO",
+        "distributionChannel": "TO-DC",
+        "refId": "idwegwefdwdt",
+        "externalCaseId": "73259968",
+        "externalRefId": "IBP2V",
+        "bookingType": "Booking",
+        "bookingState": "BookingCompleted"
+      }
+    }
+    ```
+
+    For the `booking_change_initiated` event we additionally deliver the data of the alternative itinerary:
+
+    Example:
+    ```
+    {
+      "event": "booking_change_initiated"
+      "booking": {
+        "url": "https://api.tripbuilder.app/bookings/v1.13/idwegwefdwdt"
+        "tourOperator": "TO",
+        "distributionChannel": "TO-DC",
+        "refId": "idwegwefdwdt",
+        "externalCaseId": "73259968",
+        "externalRefId": "IBPV1",
+        "bookingType": "Booking",
+        "bookingState": "BookingCompleted"
+      },
+      "alternative": {
+        "url": "https://api.tripbuilder.app/bookings/v1.13/adw33ddbb2ip"
+        "tourOperator": "TO",
+        "distributionChannel": "TO-DC",
+        "refId": "adw33ddbb2ip",
+        "externalCaseId": "73259968",
+        "externalRefId": "IBPV2",
+        "bookingType": "Booking",
+        "bookingState": "InPlanning"
+      }
+    }
+    ```
+
+    ## Delivery Headers
+    HTTP POST payloads that are delivered to your webhook's configured URL endpoint will contain several special headers:
+
+    Header | Description
+    ---------------------|-------------
+    `X-Nezasa-Event`     | The name of the event that triggered the delivery.
+    `X-Nezasa-Signature` | The HMAC hex digest of the response body. The HMAC hex digest is generated using the `sha256` hash function and the `secret` as the HMAC `key`.
+
+    ## Ordering of event deliveries
+    As HTTP does not guarantee any delivery order, subscribers may receive events out of order.
+    To address this, events include a `sequence` field that is incremented by 1 which each delivery, initially starting at 1.
+    This also allows to detect if any delivery was lost and take appropriate measures if needed (e.g. fetch all bookings that changed
+    within the last five minutes via Booking API).
+
+    Note that duplicate webhook events are not a “bug”. Subscribers can detect these and filter them out based
+    on the sequence number and/or the delivery UUID.
+
+    ## Security and Signature Verification
+    Nezasa signs the webhook events it sends to your endpoints by including a signature in each event’s `X-Nezasa-Signature` header.
+    This allows you to verify that the events were sent by Nezasa, not by a third party.
+
+    Before you can verify signatures, you need to set a secret when you create the webhook.
+
+    Values for a signing secret can be obtained e.g. using OpenSSL on the command line:
+    openssl rand -hex 32
+
+    Nezasa generates signatures using a hash-based message authentication code (HMAC) with SHA-256. To verify the signature
+    you have to compute an HMAC with the SHA256 hash function. Use the webhook’s signing secret as the key, and use the
+    payload string as the message. Compare the signature in the header to the expected signature. Note that the signature must be
+    computed based on the response body as sent by Nezasa, i.e. no further normalization, pretty-printing or similar must be applied
+    to the JSON payload.
+
+    Each event triggered has a unique UUID (RFC 4122) and a timestamp (in ISO-8601 format) to identify the payload.
+    The signature in `X-Nezasa-Signature` is based on both fields and can be used by the subscriber to prevent replay attacks:
+    An attacker who doesn't know the secret will not be able to forge signatures. If they should ever get a hold of a legitimate
+    delivery, all they could do is to send the same request a second time. Keeping track of all UUID received makes it possible
+    to reject duplicate requests. Alternatively, the window of opportunity for the attack could be limited by rejecting events
+    with a timestamp older than a certain threshold. A combination of both methods could be used to avoid keeping records of
+    UUIDs infinitely.
+
+    ## Example Delivery
+    Example:
+    ```
+    POST /payload HTTP/1.1
+    Host: localhost:4567
+
+    X-Nezasa-Signature: sha256=24f66aed3197b6eaaebacde4dade4cac8ba1ab2b2faf0c2ef76b135d8137d5ce
+    X-Nezasa-Event: booking_completed
+    Content-Type: application/json
+    Content-Length: 454
+    {
+      "event": "booking_completed",
+      "delivery": "9011fcdb-3772-45d5-be77-50132c50d0d4",
+      "timestamp": "2021-08-31T14:05:33Z",
+      "sequence": 42,
+      "booking": {
+        "url": "https://api.tripbuilder.app/bookings/v1.13/idwegwefdwdt",
+        "tourOperator": "TO",
+        "distributionChannel": "TO-DC",
+        "refId": "idwegwefdwdt",
+        "externalCaseId": "73259968",
+        "externalRefId": "IBP2V",
+        "bookingType": "Booking",
+        "bookingState": "BookingCompleted"
+      }
+    }
+    ```
+
+    Note:
+    The signature in this example was computed using the sample key 1122334455667788112233445566778811223344556677881122334455667788
+    (in hex notation) using the command:
+    `openssl sha256 -mac HMAC -macopt hexkey:1122334455667788112233445566778811223344556677881122334455667788`.
+
+    # Ping Event
+    When you create a new webhook, we'll send you a simple ping event to let you know you've set up the webhook correctly.
+    This event can be useful for development and testing. It allows you to test your webhook without touching any actual bookings.
+    We only send ping events for active webhooks that are registered for events of type `ping`.
+
+    Ping events will neither have a `booking` nor `alternative` field, but all other fields and headers are sent. Specifically, it contains
+    a valid signature computed using the secret you configured for the webhook.
+
+    ## Example Delivery
+    Example:
+    ```
+    POST /payload HTTP/1.1
+    Host: localhost:4567
+
+    X-Nezasa-Signature: sha256=fdf5e103db54a55b76252c77e164eb1344e6af221c42a9db0486d3e8692f76ab
+    X-Nezasa-Event: ping
+    Content-Type: application/json
+    Content-Length: 131
+    {
+      "event": "ping",
+      "delivery": "a9541334-bafa-457a-bbcd-813193a7c435",
+      "timestamp": "2021-08-31T14:05:33Z",
+      "sequence": 1
+    }
+    ```
+
+    The signature above was computed using the same key as in the example before.
+
+  contact:
+    email: support@nezasa.com
+    url: 'https://www.nezasa.com'
+host: api.tripbuilder.app
+schemes:
+  - https
+securityDefinitions:
+  basicAuth:
+    type: basic
+# To apply Basic auth to the whole API:
+security:
+  - basicAuth: []
+basePath: /webhooks/v1
+# TODO: Should we use the basePath /bookings/webhooks/v1 so that we can have different webhooks for different services/namespaces?
+parameters:
+  versionParam:
+    name: version
+    description: Version number of the API
+    in: path
+    type: string
+    required: true
+  distributionChannelIdParam:
+    name: distributionChannelId
+    description: The id of the distribution channel
+    in: path
+    type: string
+    required: true
+  webhookIdParam:
+    name: webhookId
+    description: The id of the webhook
+    in: path
+    type: string
+    required: true
+paths:
+  /{distributionChannelId}:
+    parameters:
+      - $ref: '#/parameters/versionParam'
+      - $ref: '#/parameters/distributionChannelIdParam'
+    get:
+      summary: Lists registered hooks
+      description: Lists all hooks registered for a tour operator.
+      produces:
+        - application/json
+      responses:
+        200:
+          description: |
+            Returns an array of webhook objects containing webhook details.
+            and possibly a meta object holding addition information and/or warnings.
+            The configured signing secret will be "blanked" in the response.
+          schema:
+            $ref: './webhook-api-models-v1.yaml#/definitions/WebhookListResponse'
+        404:
+          description: The company could not be found
+          schema:
+            $ref: './webhook-api-models-v1.yaml#/definitions/ProblemResponse'
+    post:
+      summary: Create a webhook
+      description: Creates a new webhook.
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/versionParam'
+        - $ref: '#/parameters/distributionChannelIdParam'
+        - name: data
+          description: |
+            Webhook creation request.
+          in: body
+          schema:
+            $ref: './webhook-api-models-v1.yaml#/definitions/WebhookCreateRequest'
+      responses:
+        200:
+          description: Returns an object containing the created webhook
+          schema:
+            $ref: './webhook-api-models-v1.yaml#/definitions/WebhookResponse'
+        400:
+          description: The request was invalid
+          schema:
+            $ref: './webhook-api-models-v1.yaml#/definitions/ProblemResponse'
+
+  /{distributionChannelId}/{webhookId}:
+    parameters:
+      - $ref: '#/parameters/versionParam'
+      - $ref: '#/parameters/distributionChannelIdParam'
+      - $ref: '#/parameters/webhookIdParam'
+    get:
+      summary: Get single hook
+      description: Gets the details of a single webhook.
+      produces:
+        - application/json
+      responses:
+        200:
+          description: |
+            Returns the details of a single webhook and possibly a meta object holding addition information and/or warnings.
+            The configured signing secret will be "blanked" in the response.
+          schema:
+            $ref: './webhook-api-models-v1.yaml#/definitions/WebhookResponse'
+        404:
+          description: The webhook could not be found.
+          schema:
+            $ref: './webhook-api-models-v1.yaml#/definitions/ProblemResponse'
+    patch:
+      summary: Update a webhook
+      description: Update an existing webhook
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/versionParam'
+        - $ref: '#/parameters/distributionChannelIdParam'
+        - $ref: '#/parameters/webhookIdParam'
+        - name: data
+          description: |
+            Webhook update request
+          in: body
+          schema:
+            $ref: './webhook-api-models-v1.yaml#/definitions/WebhookUpdateRequest'
+      responses:
+        200:
+          description: Returns an object containing the updated webhook
+          schema:
+            $ref: './webhook-api-models-v1.yaml#/definitions/WebhookResponse'
+        400:
+          description: The request was invalid
+          schema:
+            $ref: './webhook-api-models-v1.yaml#/definitions/ProblemResponse'
+    delete:
+      summary: Delete a webhook
+      description: Deletes a webhook identified by its id.
+      parameters:
+        - $ref: '#/parameters/versionParam'
+        - $ref: '#/parameters/distributionChannelIdParam'
+        - $ref: '#/parameters/webhookIdParam'
+      responses:
+        204:
+          description: Returns 204 No Content if delete was successful
