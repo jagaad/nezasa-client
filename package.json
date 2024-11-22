@@ -1,0 +1,27 @@
+{
+	"name": "@jagaad/nezasa-client",
+	"version": "0.0.0",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 0",
+		"release": "np"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jagaad/nezasa-client.git"
+	},
+	"files": [
+		"types"
+	],
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"devDependencies": {
+		"@jagaad/prettier-config": "^1.1.1",
+		"np": "^10.0.7",
+		"prettier": "^3.3.3",
+		"swagger-typescript-api": "^13.0.23",
+		"typescript": "^5.6.3"
+	},
+	"prettier": "@jagaad/prettier-config"
+}

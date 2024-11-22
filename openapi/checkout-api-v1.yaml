@@ -1,0 +1,2173 @@
+openapi: 3.0.0
+info:
+  title: Checkout API (BETA)
+  version: 1.0.0
+  description: |
+    API for managing the checkout process, including authentication, upsell items, traveler details, and booking.
+    To manage payment transactions, we provide a separate API.
+    Refer to https://docs.tripbuilder.app/Mo9reezaehiengah/payment-transaction-api.html for more information.
+
+    ## Doc Version
+
+    Last Updated: 2024-10-22
+
+    ## Workflow
+    The following steps outline the workflow for using the Checkout API:
+
+    ```
+
+    | Create Checkout |
+        |
+        v
+    | Update Traveler Details|
+        |
+        v
+    | Select Insurances and Upsell Items |
+        |
+        v
+    | Reply to Questions if Needed |
+        |
+        v
+    | Run Availability Check |
+        |
+        v
+    | Process Payment |
+        |
+        v
+    | Book |
+    ```
+
+    ## Compression
+
+    All endpoints in the REST API support gzip compression for both request and response payloads. Most client side
+    frameworks have built-in support for gzip encoding as well. Compressing API payloads improves an application's
+    performance and reduces bandwidth consumption by sending and receiving smaller payloads.
+
+    ## Localization
+    The localization parameters are determined through a series of checks on the existing cookies
+    (which are part of the request) as well as the default values defined by underlying distribution
+    channel configuration.
+
+    ### Language
+    The steps to determine the language parameter are as follows.
+
+    1. The "lang" HTTP-Cookie is present together with the languages defined in the "Accept-Language" header
+       are concatenated together to form a list of language code. The language from the HTTP-Cookie is
+       first in the list since it takes precedence over the "Accept-Language" header.
+
+    2. The list of languages from step (1) is checked against the distribution channel's default communication
+       language as well as the list of languages supported by this distribution channel. The first language
+       in the list from step (1) which satisfies the condition of being supported by the distribution channel
+       is taken as the localization language parameter to use.
+
+    3. If none of the languages from step (1) satisfies any of the the distribution channel's supported languages,
+       then we either take the first language from the list from step (1) or we default to EN.
+
+    ### Currency
+    The currency is determined similarly to how the language localization parameter is set. First the
+    "currency" Cookie is checked and if a value exist, we verify if this value is supported by the
+    distribution channel. If it is supported, then the value from the currency Cookie is used, otherwise the
+    default user currency value configured on the distribution channel is taken.
+
+    If no currency Cookie exists, then we try looking up the currency using the first language in the
+    "Accept-Language" header. If this currency is supported by the distribution channel, then it is taken as
+    the user currency, otherwise, we simply default to the user currency configured on the distribution channel.
+
+    ## Timeouts
+    The Planner API has a general request timeout of 30 seconds. If a request cannot be served within this time a
+    HTTP error 503 is returned and the connection is closed by the server.
+
+    ## Error Handling
+    Nezasa uses conventional HTTP response codes to indicate the success or failure of an API request. In general,
+    codes in the 2xx range indicate success, codes in the 4xx range indicate an error that failed given the
+    information provided (e.g., a required parameter was omitted or is in the wrong format), and codes in the 5xx
+    range indicate an error with Nezasa’s servers.
+
+    ## Host
+    The host api.tripbuilder.app is used as placeholder in this documentation. The actual host to be used may be
+    a white-labelled domain of your TripBuilder setup.
+
+servers:
+  - url: https://api.dev.tripbuilder.app
+  - url: https://api.stg.tripbuilder.app
+  - url: https://api.tripbuilder.app
+
+components:
+  schemas:
+    GeoLocation:
+      type: object
+      description: Defines a geographic point such as an airport or area
+      required:
+        - name
+        - coordinates
+      properties:
+        name:
+          type: string
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        countryCode:
+          type: string
+          format: iso-3661-1
+          description: an ISO 3166-1 alpha-2 country code
+
+    Coordinates:
+      type: object
+      required:
+        - lat
+        - lon
+      properties:
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+
+    MonetaryValue:
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: number
+          description: The amount of money
+        currency:
+          type: string
+          description: The currency of the amount, in ISO 4217 format
+
+    BookingStatus:
+      type: string
+      enum:
+        - Open
+        - OnRequest
+        - Booked
+        - NonBookable
+        - Cancelled
+        - None
+
+    Address:
+      type: object
+      properties:
+        country:
+          type: string
+        countryCode:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        street1:
+          type: string
+        street2:
+          type: string
+          nullable: true
+        region:
+          type: string
+          nullable: true
+
+    ContactInfo:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        companyName:
+          type: string
+        gender:
+          type: string
+          enum: [male, female, other]
+        address:
+          $ref: '#/components/schemas/Address'
+        email:
+          type: string
+        mobilePhone:
+          type: string
+        taxNumber:
+          type: string
+          nullable: true
+
+    PaxInfo:
+      type: object
+      properties:
+        refId:
+          type: string
+          description: A unique ID for the passenger in the format ('pax-<number>') and it should be sequential.
+        firstName:
+          type: string
+        lastName:
+          type: string
+        gender:
+          type: string
+          enum: [male, female, other]
+        age:
+          type: integer
+        birthDate:
+          description: A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
+          type: string
+          example: '2017-12-31'
+        nationality:
+          type: string
+        nationalityCountryCode:
+          type: string
+        passportNr:
+          type: string
+        secondOrAdditionalName:
+          type: string
+          nullable: true
+        isMainContact:
+          type: boolean
+        passportExpirationDate:
+          type: string
+          description: A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
+          example: '2017-12-31'
+        passportIssuingCountry:
+          type: string
+        passportIssuingCountryCode:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        externalRefId:
+          type: string
+          nullable: true
+
+    UpsellItemOffer:
+      type: object
+      required:
+        - offerId
+        - name
+        - description
+        - serviceCategories
+      properties:
+        offerId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        serviceCategories:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceCategoryOffer'
+
+    ServiceCategoryOffer:
+      type: object
+      required:
+        - serviceCategoryRefId
+        - name
+        - salesPrice
+      properties:
+        serviceCategoryRefId:
+          type: string
+        name:
+          type: string
+        salesPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+
+    UpsellItemOfferSelection:
+      type: object
+      required:
+        - offerId
+      properties:
+        offerId:
+          type: string
+        serviceCategoryRefId:
+          type: string
+          nullable: true
+          description: The service category ref ID to add the upsell item or null to remove it
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+          description: The quantity of the upsell item to add or remove
+
+    UpsellItem:
+      type: object
+      required:
+        - componentRefId
+        - name
+        - netPrice
+        - salesPrice
+        - status
+      properties:
+        componentRefId:
+          type: string
+          description: The component unique identifier
+        name:
+          type: string
+          description: The name of the Upsell Item
+        description:
+          type: string
+          description: A description for any additional information about the item
+        netPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+        salesPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+        supplier:
+          type: string
+          description: The supplier of the upsell item
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        supplierConfirmationNumber:
+          type: string
+          description: The supplier confirmation number if component status is booked.
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+
+    Itinerary:
+      type: object
+      description: |
+        This view object is a representation of our Itinerary model. It provides callers with
+        the structure as well as pertinent information pertaining to their entire trip.
+      required:
+        - id
+        - title
+        - lastModified
+        - startDate
+        - endDate
+        - modules
+        - availabilities
+      properties:
+        id:
+          type: string
+          description: The ID of the itinerary
+        title:
+          type: string
+        lastModified:
+          type: string
+        templateId:
+          type: string
+          description: |
+            If present it is the ID of the itinerary-template from which this itinerary was generated. Not
+            all itineraries have a static itinerary-template backing them. Itineraries-from-Scratch, for example,
+            have a dynamically generated itinerary-template and as such, do not contain a `templateId`
+        startDate:
+          type: string
+          description: A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
+          example: '2017-12-31'
+        endDate:
+          type: string
+          description: A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
+          example: '2017-12-31'
+        modules:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
+        availabilities:
+          $ref: '#/components/schemas/ItineraryAvailabilities'
+
+    Module:
+      type: object
+      required:
+        - id
+        - startLocation
+        - endLocation
+        - moduleType
+      properties:
+        id:
+          type: string
+          description: A unique ID (only within the owning Itinerary) which identifies this module
+        startLocation:
+          $ref: '#/components/schemas/GeoLocation'
+        endLocation:
+          $ref: '#/components/schemas/GeoLocation'
+        legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Leg'
+
+    Leg:
+      type: object
+      description: |
+        A Leg is a container object which houses a series of feeder connections and a stop. The purpose
+        of the feeder connections is to bring the PAX from either the start location (if this happens to
+        be the first leg) or from a previous leg to the stop.
+
+        ```
+        +-------------------------+
+        | +-----------------+     |
+        | |      C1         |  +  |
+        | +----+------------+  |  |
+        |      |               |  |
+        | +----+------------+  |  |
+        | |      C2         |  | Connections
+        | +----+------------+  |  |
+        |      |               |  |
+        | +----+------------+  |  |
+        | |      Cn         |  +  |
+        | +----+------------+     |
+        |      |                  |
+        | +----+------------+     |
+        | |                 |     |
+        | |  Stop           |     |
+        | | (Area, Nights)  |     |
+        | |                 |     |
+        | +-----------------+     |
+        +-------------------------+
+        ```
+      required:
+        - id
+        - startDate
+        - stop
+      properties:
+        id:
+          type: string
+        startDate:
+          type: string
+          description: A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
+          example: '2017-12-31'
+        stop:
+          $ref: '#/components/schemas/Stop'
+
+    Stop:
+      type: object
+      description: |
+        Describes the period in which a traveler stays in one area. This also includes the hotels (accommodations)
+        for the entire duration of the stop.
+      required:
+        - stopLocation
+        - area
+        - nights
+        - accommodations
+        - startDate
+      properties:
+        stopLocation:
+          $ref: '#/components/schemas/StopLocation'
+        areaDescription:
+          $ref: '#/components/schemas/AreaDescription'
+        nights:
+          type: integer
+          format: int32
+        maxNights:
+          type: integer
+          format: int32
+          description: Maximum number of nights this stop can be.
+        minNights:
+          type: integer
+          format: int32
+          description: Minimum number of nights this stop can be.
+        startDate:
+          type: string
+          description: A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
+          example: '2017-12-31'
+
+    StopLocation:
+      type: object
+      description: |
+        A specialized type of location which serves as the location for a Stop
+      required:
+        - id
+        - name
+        - coordinates
+        - locationType
+        - timezone
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        countryCode:
+          type: string
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        locationType:
+          type: string
+          enum:
+            - Area
+            - Airport
+
+    AreaDescription:
+      type: object
+      description: |
+        A view over the AreaDescription model which describes an area (textual descriptions and pictures).
+      required:
+        - id
+        - keySentence
+      properties:
+        id:
+          type: string
+          description: A unique ID which identifies the area description
+        keySentence:
+          type: string
+          description: A key sentence describing the area description
+        shortDescription:
+          type: string
+          description: Short description of the area
+
+    ItineraryAvailabilities:
+      type: object
+      required:
+        - useStartDateRange
+        - availabilities
+      properties:
+        useStartDateRange:
+          type: boolean
+        availabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItineraryAvailability'
+
+    ItineraryAvailability:
+      type: object
+      required:
+        - startDate
+        - endDate
+      properties:
+        startDate:
+          type: string
+          description: A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
+          example: '2017-12-31'
+        endDate:
+          type: string
+          description: A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
+          example: '2017-12-31'
+
+    ExternalReference:
+      type: object
+      required:
+        - id
+        - system
+      properties:
+        id:
+          type: string
+        system:
+          type: string
+
+    TravelAgencyDetails:
+      type: object
+      required:
+        - refId
+      properties:
+        refId:
+          type: string
+          description: The id that can be used to identify this travel agency in our system
+
+    OptIns:
+      type: object
+      required:
+        - optIns
+      properties:
+        contactInfo:
+          type: object
+          description: The contact information for the user
+          properties:
+            email:
+              type: string
+              description: The user email to opt-in to marketing communications
+        optIns:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptInChannel'
+
+    OptInChannel:
+      type: object
+      required:
+        - type
+        - consent
+        - channel
+      properties:
+        type:
+          type: string
+          enum:
+            - Newsletter
+        consent:
+          type: boolean
+        channel:
+          type: string
+
+    TermsAndConditions:
+      type: object
+      required:
+        - sections
+      properties:
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/TextSection'
+
+    TextSection:
+      type: object
+      required:
+        - header
+        - text
+      properties:
+        header:
+          type: string
+        text:
+          type: string
+          format: html
+        checkboxText:
+          type: string
+          format: html
+        supplierId:
+          type: string
+          description: |
+            If defined, this section is specific to the supplier with the given ID.
+
+    PaymentTransaction:
+      type: object
+      required:
+        - amount
+        - status
+        - paymentMethod
+        - created
+      properties:
+        amount:
+          $ref: '#/components/schemas/MonetaryValue'
+        status:
+          type: string
+          enum:
+            - Open
+            - InProgress
+            - PreauthCaptureInProgress
+            - Pending
+            - Preauth
+            - Closed
+            - Failed
+            - Deleted
+            - Unknown
+        paymentMethod:
+          type: string
+          enum:
+            - CreditCard
+            - DirectDebit
+            - BankTransfer
+            - Future
+            - Unknown
+            - Other
+        created:
+          type: string
+          description: A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
+          example: '2017-12-31'
+
+    ## Requests and Responses
+
+    CheckoutDetails:
+      type: object
+      required:
+        - refId
+        - checkoutState
+        - termsAndConditions
+        - itinerary
+        - travelerDetails
+        - prices
+        - insurances
+        - paymentTransactions
+        - upsellItems
+        - optIns
+        - travelAgency
+      properties:
+        refId:
+          type: string
+          description: The checkout Ref ID
+        checkoutState:
+          type: string
+          description: The checkout Status
+        termsAndConditions:
+          $ref: '#/components/schemas/TermsAndConditions'
+        itinerary:
+          $ref: '#/components/schemas/Itinerary'
+        travelerDetails:
+          $ref: '#/components/schemas/TravelerDetails'
+        prices:
+          $ref: '#/components/schemas/PackagePayableInfo'
+        insurances:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsuranceAdHocComponentResponse'
+        paymentTransactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentTransaction'
+        upsellItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsellItem'
+        optIns:
+          $ref: '#/components/schemas/OptIns'
+        travelAgency:
+          $ref: '#/components/schemas/TravelAgencyDetails'
+
+    CreateCheckoutRequest:
+      type: object
+      properties:
+        agencyId:
+          type: string
+          description: The id of travel agency doing the checkout
+
+    CreateCheckoutResponse:
+      type: object
+      required:
+        - redirectUrl
+      properties:
+        redirectUrl:
+          type: string
+          description: The URL to redirect to
+
+    InsuranceAdHocComponentUpsertRequest:
+      type: object
+      required:
+        - name
+        - netPrice
+        - salesPrice
+      properties:
+        name:
+          type: string
+          description: The name of the insurance
+        description:
+          type: string
+          description: A description for any additional information about the insurance
+        netPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+        salesPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+        bookingStatus:
+          $ref: '#/components/schemas/BookingStatus'
+        supplierConfirmationNumber:
+          type: string
+          description: The confirmation number on the supplier
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+        paxSelection:
+          type: array
+          items:
+            type: string
+          description: The pax selection for the insurance
+
+    InsuranceAdHocComponentResponse:
+      type: object
+      required:
+        - componentId
+        - name
+        - netPrice
+        - salesPrice
+      properties:
+        componentId:
+          type: string
+          description: The component unique identifier
+        name:
+          type: string
+          description: The name of the insurance
+        description:
+          type: string
+          description: A description for any additional information about the insurance
+        netPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+        salesPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+        bookingStatus:
+          $ref: '#/components/schemas/BookingStatus'
+        supplierConfirmationNumber:
+          type: string
+          description: The confirmation number on the supplier
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+        paxSelection:
+          type: array
+          items:
+            type: string
+          description: The pax selection for the insurance
+
+    UpsellItemRequest:
+      type: object
+      required:
+        - name
+        - netPrice
+        - salesPrice
+      properties:
+        name:
+          type: string
+          description: The name of the Upsell Item
+        description:
+          type: string
+          description: A description for any additional information about the item
+        netPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+        salesPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        supplierConfirmationNumber:
+          type: string
+          description: The external reference ID of the Upsell Item
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+
+    UpsellItemCreateRequest:
+      allOf:
+        - $ref: '#/components/schemas/UpsellItemRequest'
+        - type: object
+          required:
+            - quantity
+          properties:
+            quantity:
+              type: integer
+              description: The quantity of the Upsell Items to create
+
+    UpsellItemOffersResponse:
+      type: object
+      required:
+        - offers
+      properties:
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsellItemOffer'
+
+    UpsellItemOfferSelectionRequest:
+      type: object
+      required:
+        - selection
+      properties:
+        selection:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsellItemOfferSelection'
+
+    AvailabilitySummary:
+      type: object
+      description: |
+        The object containing various aspects of the itinerary recheck, such
+        as rechecked components and general recheck remarks.
+      required:
+        - components
+        - packagePayableAmount
+        - remarks
+      properties:
+        components:
+          description: |
+            The result per component of the recheck, containing base information about
+            each component and the result of the recheck (e.g., not available anymore).
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityComponent'
+        packagePayableAmount:
+          $ref: '#/components/schemas/PackagePayableInfo'
+        remarks:
+          description: |
+            A list of general findings by the recheck. The information may contain hints such as
+            pointing out that a stop has no hotel yet.
+          type: array
+          items:
+            type: string
+
+    AvailabilityComponent:
+      description: |
+        The object contains the relevant information about a component after the
+        rechecked has been performed. Note that the components have been updated
+        as well accordingly in the itinerary itself.
+      type: object
+      required:
+        - id
+        - componentType
+        - status
+        - nonBookable
+        - price
+      properties:
+        id:
+          description: |
+            The ID of the component. Can be matched against the components in the
+            itinerary object in order to gather more details about the component.
+          type: string
+        componentType:
+          type: string
+        status:
+          description: |
+            Describes the status of the component after the availability check:
+
+            * Open: it is available
+            * OnRequest: it is available on request
+            * Booked: it is booked
+            * NonBookable: it is not available (hint: the `nonBookable` can be `true` even if status is not `NonBookable`)
+            * Cancelled: it was booked, and then cancelled successfully
+            * None: it has a unknown status
+          type: string
+          enum:
+            - Open
+            - OnRequest
+            - Booked
+            - NonBookable
+            - Cancelled
+            - None
+        nonBookable:
+          description: |
+            Indicates whether the component can be booked as is or not. Booking attempts
+            of itineraries with non-bookable components may fail depending on the reason
+            why the component is non-bookable.
+          type: boolean
+        nonBookableReason:
+          description: |
+            If possible, the system tries to indicate a reason why a component might be
+            non-bookable. Not all reasons will block the actual booking of the itinerary,
+            see their descriptions below. The following reasons are currently in use:
+
+            * NoAvailability: the component is no longer available.
+            * DateTimeConflict: the flight component as a date/time that conflicts with other connection
+            * PaxSelectionConflict: the flight component has a pax selection that conflicts with another flight
+            * Cancelled: the component has been cancelled
+            * NonFittingToItinerary: the component is no longer aligned to the current itinerary structure
+            * NonFittingLocations: the component's start and/or end locations are not aligned with the itinerary locations immediately before and/or after. This is only only flagged as a warning, and may not be actual an issue for the booking.
+            * UnscheduledComponentNoLocationFound: indicates that the component cannot currently be scheduled due to an incorrect itinerary structure.
+            * NonFittingButAccepted: indicates that this component doesn't fit but has been marked by the user as accepted for booking nevertheless.
+            * NoTicketsSelected: this component needs individual tickets to be assigned in order to be booked
+            * Unknown
+          type: string
+          enum:
+            - NoAvailability
+            - DateTimeConflict
+            - PaxSelectionConflict
+            - Cancelled
+            - NonFittingToItinerary
+            - NonFittingLocations
+            - NonFittingButAccepted
+            - NoTicketsSelected
+            - UnscheduledComponentNoLocationFound
+            - Unknown
+        price:
+          $ref: '#/components/schemas/MonetaryValue'
+        previousPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+        name:
+          description: |
+            A localized name representing the component, e.g., the hotel or activity name.
+          type: string
+        startDate:
+          description: |
+            A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
+            representing the start date of component if applicable, e.g., hotel check-in date.
+          type: string
+          example: '2017-12-31'
+        endDate:
+          description: |
+            A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
+            representing the end date of component if applicable, e.g., hotel check-out date.
+          type: string
+          example: '2017-12-31'
+        locationName:
+          description: |
+            A reference to the location of the component, usually the city name.
+          type: string
+        alternativesSearchUrl:
+          description: |
+            A URL to the availability check endpoint for this component. This URL can be used to
+            redirect the user to the products search page to search for alternative products,
+            useful if a component is nonBookable. Add a `goto` query param to this url so if a
+            redirect back is needed.
+          type: string
+
+    AvailabilityCheckResponse:
+      type: object
+      required:
+        - itinerary
+        - summary
+      properties:
+        itinerary:
+          $ref: '#/components/schemas/Itinerary'
+        summary:
+          $ref: '#/components/schemas/AvailabilitySummary'
+
+    BookingResponse:
+      type: object
+      required:
+        - itinerary
+        - summary
+      properties:
+        itinerary:
+          $ref: '#/components/schemas/Itinerary'
+        summary:
+          $ref: '#/components/schemas/AvailabilitySummary'
+
+    StartBookingResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+
+    TravelerDetails:
+      type: object
+      description: Traveler details
+      required:
+        - paxInfo
+      properties:
+        contactInfo:
+          $ref: '#/components/schemas/ContactInfo'
+        paxInfo:
+          type: array
+          description: Information about each passenger
+          items:
+            $ref: '#/components/schemas/PaxInfo'
+        billingInfo:
+          $ref: '#/components/schemas/ContactInfo'
+
+    RequiredTravelerFields:
+      type: object
+      required:
+        - contact
+        - billing
+        - passenger
+      properties:
+        contact:
+          type: object
+          properties:
+            firstName:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            lastName:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            companyName:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            email:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            mobilePhone:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            address1:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            address2:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            postalCode:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            city:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            country:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            state:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            gender:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            taxNumber:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+        billing:
+          type: object
+          properties:
+            firstName:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            lastName:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            email:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            mobilePhone:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            address1:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            address2:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            postalCode:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            city:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            country:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            taxNumber:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+        passenger:
+          type: object
+          properties:
+            firstName:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            lastName:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            secondOrAdditionalName:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            gender:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            number:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            nationality:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            dateOfBirth:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            expirationDate:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            issuingCountry:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+
+    RequiredTravelerFieldType:
+      type: string
+      enum:
+        - required
+        - optional
+        - hidden
+
+    ExternallyPaidCharge:
+      type: object
+      description: |
+        Charges to be paid externally, meaning not on our platform. These are charges for
+        things that we want to show the price on our platform, however, when the user makes
+        the payment, we wouldn't charge for them. Instead, these charges are paid in the
+        destination.
+      required:
+        - name
+        - value
+      properties:
+        name:
+          type: string
+        value:
+          $ref: '#/components/schemas/MonetaryValue'
+
+    ExternallyPaidCharges:
+      type: object
+      description: |
+        Charges to be paid externally, meaning not on our platform. These are charges for
+        things that we want to show the price on our platform, however, when the user makes
+        the payment, we wouldn't charge for them. Instead, these charges are paid in the
+        destination.
+      required:
+        - externallyPaidCharges
+        - totalPrice
+        - unitPrice
+      properties:
+        externallyPaidCharges:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternallyPaidCharge'
+        totalPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+        unitPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+
+    PackagePayableInfo:
+      type: object
+      required:
+        - packageSalesPrice
+        - totalAmountToBePaid
+        - nonPayableAmount
+        - openPayment
+        - paymentDue
+        - externallyPaidCharges
+      properties:
+        packageSalesPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+        totalAmountToBePaid:
+          $ref: '#/components/schemas/MonetaryValue'
+        nonPayableAmount:
+          $ref: '#/components/schemas/MonetaryValue'
+        openPayment:
+          $ref: '#/components/schemas/MonetaryValue'
+        paymentDue:
+          $ref: '#/components/schemas/MonetaryValue'
+        externallyPaidCharges:
+          $ref: '#/components/schemas/ExternallyPaidCharges'
+        promoCodeDiscount:
+          $ref: '#/components/schemas/MonetaryValue'
+
+    PromoCodeRequest:
+      type: object
+      required:
+        - promoCode
+      properties:
+        promoCode:
+          type: string
+          description: The promo code to add or redeem
+
+    ActivityQuestions:
+      type: object
+      required:
+        - componentId
+        - productName
+        - questions
+      properties:
+        componentId:
+          type: string
+        productName:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityQuestion'
+
+    ActivityQuestion:
+      type: object
+      required:
+        - refId
+        - question
+        - required
+      properties:
+        refId:
+          type: string
+        question:
+          type: string
+        required:
+          type: boolean
+        answer:
+          type: string
+        placeholder:
+          type: string
+        answerOptions:
+          type: array
+          items:
+            type: object
+            required:
+              - refId
+              - displayName
+            properties:
+              refId:
+                type: string
+              displayName:
+                type: string
+        answerValidation:
+          type: string
+          enum:
+            - int
+            - double
+            - boolean
+            - date
+            - dateAndTime
+            - phone
+
+    ActivityQuestionAnswer:
+      type: object
+      required:
+        - componentId
+        - questionRefId
+        - answer
+      properties:
+        componentId:
+          type: string
+        questionRefId:
+          type: string
+        answer:
+          type: string
+
+    ProblemResponse:
+      type: object
+      description: An array of Problem objects
+      required:
+        - status
+        - problems
+      properties:
+        status:
+          type: integer
+          format: int32
+          description: The HTTP status code generated for this problem response
+          minimum: 100
+          maximum: 600
+          exclusiveMaximum: true
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/Problem'
+
+    Problem:
+      type: object
+      description: A Problem object inspired by https://tools.ietf.org/html/rfc7807 (Problem Details for HTTP APIs)
+      required:
+        - code
+        - detail
+        - level
+      properties:
+        code:
+          type: string
+          description: A specific code narrowing the type of Problem down
+          example: 'InputValidation'
+        detail:
+          type: string
+          description: A human readable explanation (localized to the language of the user) of this problem
+        level:
+          type: string
+          description: The severity of the problem
+          enum:
+            - ERROR
+            - WARNING
+        source:
+          $ref: '#/components/schemas/ProblemSource'
+
+    ProblemSource:
+      type: object
+      description: An object containing references to the source of the error
+      required:
+        - pointer
+      properties:
+        pointer:
+          type: string
+          description: A reference to the associated entity in the request document which caused the problem
+          example: '"/data" for a primary data object or "/title" for a specific attribute'
+
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+
+  responses:
+    CheckoutDetailsResponse:
+      description: Checkout details response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CheckoutDetails'
+
+    AvailabilityCheckResponse:
+      description: Availability check response
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - itinerary
+              - summary
+            properties:
+              itinerary:
+                $ref: '#/components/schemas/Itinerary'
+              summary:
+                $ref: '#/components/schemas/AvailabilitySummary'
+
+    BookingResponse:
+      description: Booking response
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - itinerary
+              - summary
+            properties:
+              itinerary:
+                $ref: '#/components/schemas/Itinerary'
+              summary:
+                $ref: '#/components/schemas/AvailabilitySummary'
+
+    StartBookingResponse:
+      description: Booking response
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - itinerary
+              - summary
+            properties:
+              status:
+                type: string
+
+    PricesResponse:
+      description: Prices response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PackagePayableInfo'
+
+    UpsellItemResponse:
+      description: Upsell Item response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UpsellItem'
+
+    UpsellItemsResponse:
+      description: Upsell Items response
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/UpsellItem'
+
+    TravelerDetailsResponse:
+      description: Traveler details response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TravelerDetails'
+
+    RequiredTravelerDetailsResponse:
+      description: Required Traveler details response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RequiredTravelerFields'
+
+    PromoCodeResponse:
+      description: >
+        Add/Redeem Promo code response
+        The response contains the updated pricing information
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PackagePayableInfo'
+
+    InsuranceResponse:
+      description: Ah-hoc Insurances response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InsuranceAdHocComponentResponse'
+
+    InsurancesResponse:
+      description: Ah-hoc Insurances response
+      content:
+        application/json:
+          schema:
+            type: array
+            description: Insurance AdHoc Components
+            items:
+              $ref: '#/components/schemas/InsuranceAdHocComponentResponse'
+
+    ActivityQuestionsResponse:
+      description: Additional activity questions response
+      content:
+        application/json:
+          schema:
+            type: array
+            description: Additional activity questions
+            items:
+              $ref: '#/components/schemas/ActivityQuestions'
+
+    OptInsResponse:
+      description: Opt-ins response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OptIns'
+
+    UnauthorizedError:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Unauthorized
+
+    ProblemResponseError:
+      description: Problem response error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemResponse'
+
+security:
+  - BasicAuth: []
+
+paths:
+  /checkout/v1/checkouts/{itineraryId}:
+    post:
+      tags:
+        - Checkout
+      summary: Create checkout models and start the checkout process
+      description: >
+        This endpoint initializes the checkout process by creating the necessary checkout models.
+        The client must provide an itinerary ID to start the process.
+      parameters:
+        - name: itineraryId
+          in: path
+          required: true
+          description: The itinerary ref ID to start the checkout process
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutRequest'
+      responses:
+        '200':
+          description: >
+            Checkout process started successfully or existing checkout found.
+            The response contains the URL to redirect to (the first step of the checkout or a configurable custom URL).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCheckoutResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          description: Reference ID not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}:
+    get:
+      tags:
+        - Checkout
+      summary: Retrieve checkout details
+      description: >
+        This endpoint retrieves the current state of a checkout session, including all relevant information
+        about the ongoing checkout process.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/CheckoutDetailsResponse'
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/availability-check:
+    post:
+      tags:
+        - Checkout
+      summary: Runs availability check and updates pricing
+      description: >
+        This endpoint performs an availability check for the current checkout session.
+        It ensures that all items in the checkout are still available for booking and updates the pricing information.
+        This is the only way to get updated pricing information that clients will need to process payments on their side before booking.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/AvailabilityCheckResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/prices:
+    get:
+      tags:
+        - Checkout
+      summary: Fetch pricing information from the checkout
+      description: >
+        This endpoint returns the pricing information from the checkout session.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/PricesResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/book:
+    post:
+      tags:
+        - Checkout
+      summary: Starts a synchronous booking process
+      description: >
+        This endpoint starts the booking process for the current checkout session.
+        The client must provide the traveler details and opt-ins to start the booking process.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/BookingResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/start-booking:
+    post:
+      tags:
+        - Checkout
+      summary: Start the booking process asynchronous
+      description: >
+        This endpoint starts the booking process for the current checkout session.
+        The client must provide the traveler details and opt-ins to start the booking process.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/StartBookingResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/insurances:
+    get:
+      tags:
+        - Insurances
+      summary: Fetch custom insurance details from the checkout
+      description: >
+        This endpoint allows the client to fetch custom insurance details from the checkout session.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/InsurancesResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - Insurances
+      summary: Add custom insurance details to the checkout
+      description: >
+        This endpoint allows the client to add custom insurance details to the checkout session.
+        The client must provide the insurance details, including name, start date, end date, and sales price.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InsuranceAdHocComponentUpsertRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/InsurancesResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/insurances/{insuranceId}:
+    put:
+      tags:
+        - Insurances
+      summary: Updates custom insurance details in the checkout
+      description: >
+        This endpoint allows the client to update custom insurance details in the checkout session.
+        The client must provide the insurance details, including name, start date, end date, and sales price.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+        - name: insuranceId
+          in: path
+          required: true
+          description: The unique identifier of the insurence component
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InsuranceAdHocComponentUpsertRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/InsuranceResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/upsell-items:
+    get:
+      tags:
+        - Upsell Items
+      summary: Retrieve available upsell items for the checkout
+      description: >
+        This endpoint retrieves a list of available upsell items for the current checkout session.
+        The client can use this information to present additional purchase options to the user.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/UpsellItemsResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - Upsell Items
+      summary: Add an ad hoc upsell item to the checkout
+      description: >
+        This endpoint allows the client to add an ad hoc upsell item to the checkout session.
+        The client must provide the upsell item details, including name, description, and price.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsellItemCreateRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/UpsellItemsResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/upsell-items/offers:
+    get:
+      tags:
+        - Upsell Items
+      summary: Retrieve available upsell items offers for the checkout
+      description: >
+        This endpoint retrieves a list of available upsell item offers for the current checkout session.
+        The client can use this information to present additional purchase options to the user.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of upsell item offers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsellItemOffersResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    put:
+      tags:
+        - Upsell Items
+      summary: Add/remove upsell item offers
+      description: >
+        This endpoint allows the client to add or remove specific upsell item offers to the checkout session.
+        The client must provide the offer ID and the service category ref ID.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsellItemOfferSelectionRequest'
+      responses:
+        '200':
+          description: Upsell item added successfully
+        '400':
+          description: Invalid request
+        '404':
+          description: Checkout or offer not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/upsell-items/{componentId}:
+    put:
+      tags:
+        - Upsell Items
+      summary: Add an ad hoc upsell item to the checkout
+      description: >
+        This endpoint allows the client to update an ad hoc upsell item in the checkout session.
+        The client must provide the upsell item details, including name, description, and price.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+        - name: componentId
+          in: path
+          required: true
+          description: The unique identifier of the upsell item component
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsellItemRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/UpsellItemResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    delete:
+      tags:
+        - Upsell Items
+      summary: Delete an ad hoc upsell item from the checkout
+      description: >
+        This endpoint allows the client to delete an ad hoc upsell item from the checkout session.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+        - name: componentId
+          in: path
+          required: true
+          description: The unique identifier of the upsell item component
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Upsell item deleted successfully
+
+  /checkout/v1/checkouts/{checkoutId}/required-traveler-details:
+    get:
+      tags:
+        - Checkout
+      summary: Get required traveler details for the checkout based on the itinerary and availability check
+      description: >
+        This endpoint retrieves the required traveler details for the current checkout session.
+        The client can use this information to collect the necessary traveler details from the user.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/RequiredTravelerDetailsResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/traveler-details:
+    post:
+      tags:
+        - Checkout
+      summary: Save traveler details for the checkout
+      description: >
+        This endpoint allows the client to save traveler details for the current checkout session.
+        The client must provide the traveler details, including contact information, passenger information, and billing information.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contactInfo:
+                  $ref: '#/components/schemas/ContactInfo'
+                paxInfo:
+                  type: array
+                  description: Information about each passenger
+                  items:
+                    $ref: '#/components/schemas/PaxInfo'
+                billingInfo:
+                  $ref: '#/components/schemas/ContactInfo'
+      responses:
+        '200':
+          description: Traveler details saved successfully
+        '400':
+          description: Invalid request
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    get:
+      tags:
+        - Checkout
+      summary: Retrieve saved traveler details for the checkout
+      description: >
+        This endpoint retrieves the saved traveler details for the current checkout session.
+        The client can use this information to review or update the traveler details before completing the booking.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Traveler details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contactInfo:
+                    $ref: '#/components/schemas/ContactInfo'
+                  paxInfo:
+                    type: array
+                    description: Information about each passenger
+                    items:
+                      $ref: '#/components/schemas/PaxInfo'
+                  billingInfo:
+                    $ref: '#/components/schemas/ContactInfo'
+        '400':
+          description: Invalid request
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/activity-questions:
+    get:
+      tags:
+        - Checkout
+      summary: Retrieve activity questions for the checkout
+      description: >
+        This endpoint retrieves the activity questions for the current checkout session.
+        The client can use this information to collect additional information from the user before completing the booking.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/ActivityQuestionsResponse'
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - Checkout
+      summary: Save traveler details for the checkout
+      description: >
+        This endpoint allows the client to save traveler details for the current checkout session.
+        The client must provide the traveler details, including contact information, passenger information, and billing information.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ActivityQuestionAnswer'
+      responses:
+        '200':
+          $ref: '#/components/responses/ActivityQuestionsResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          $ref: '#/components/responses/ProblemResponseError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/promo-codes:
+    post:
+      tags:
+        - Checkout
+      summary: Add a promo code to the checkout
+      description: >
+        This endpoint enables clients to apply a promo code to an existing checkout session.
+        Before applying the promo code, the system performs all necessary validations to ensure
+        the code is valid and applicable to the current checkout. This might include checks for
+        expiration, usage limits, and other configured conditions.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoCodeRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/PromoCodeResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          $ref: '#/components/responses/ProblemResponseError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/promo-codes/redeem:
+    post:
+      tags:
+        - Checkout
+      summary: Redeem a promo code to the checkout
+      description: >
+        This endpoint allows clients to mark a promo code as redeemed within a specific checkout session.
+        It is intended to be used after a successful booking to finalize the use of the promo code.
+        Note that the promo code must have already been added to the checkout session prior to calling
+        this endpoint, as it does not accept a promo code as input. Instead, it redeems the promo code
+        currently associated with the checkout. If no promo code was previously added, the endpoint will
+        not perform any action. This functionality is particularly useful for promo codes with limited
+        usage, ensuring they are not reused beyond the allowed limits and maintaining compliance with
+        promo code conditions.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          $ref: '#/components/responses/PromoCodeResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          $ref: '#/components/responses/ProblemResponseError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/optins:
+    get:
+      tags:
+        - Checkout
+      summary: Retrieves the opt-ins on this checkout
+      description: >
+        This endpoint retrieves the opt-ins for the current checkout session.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OptInsResponse'
+        '404':
+          description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags:
+        - Checkout
+      summary: Adds new opt-ins for the checkout
+      description: >
+        This endpoint allows the client to add opt-ins for the current checkout session.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OptIns'
+      responses:
+        '200':
+          $ref: '#/components/responses/ActivityQuestionsResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          $ref: '#/components/responses/ProblemResponseError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    delete:
+      tags:
+        - Checkout
+      summary: Deletes the opt-ins for this checkout
+      description: >
+        This endpoint allows the client to delete the opt-ins for the current checkout session.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/ActivityQuestionsResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '404':
+          $ref: '#/components/responses/ProblemResponseError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
