@@ -1,0 +1,364 @@
+openapi: 3.0.1
+info:
+  title: Template API
+  description: |
+    # Introduction
+
+    The Nezasa Template API provides RESTful services for managing itinerary templates.
+
+    ## Doc Version
+
+    Last Updated: 2024-02-15
+
+    ## Compression
+
+    All endpoints in the REST API support gzip compression for both request and response payloads.
+
+    ## Content Type
+
+    The Nezasa Template API sends all JSON API data in response documents with the header
+    `Content-Type: application/json`. Error responses are sent with the header 
+    `Content-Type: application/problem+json` following the [RFC 7807](https://tools.ietf.org/html/rfc7807)
+    standard.
+
+    ## Localization
+    The localization parameters are determined through a series of checks on the existing cookies
+    (which are part of the request) as well as the default values defined by underlying distribution
+    channel configuration.
+
+    ### Language Selection
+    The steps to determine the language parameter are as follows.
+
+    1. The "lang" HTTP-Cookie is present together with the languages defined in the "Accept-Language" header
+       are concatenated together to form a list of language code. The language from the HTTP-Cookie is
+       first in the list since it takes precedence over the "Accept-Language" header.
+
+    2. The list of languages from step (1) is checked against the distribution channel's default communication
+       language as well as the list of languages supported by this distribution channel. The first language
+       in the list from step (1) which satisfies the condition of being supported by the distribution channel
+       is taken as the localization language parameter to use.
+
+    3. If none of the languages from step (1) satisfies any of the the distribution channel's supported languages,
+       then we either take the first language from the list from step (1) or we default to EN.
+
+    ### Content Language Response
+
+    The API will attempt to return content in the specified language when available. In cases
+    where content or an item of content is not available in the requested language, it will fallback
+    to EN. This means that the caller may receive a mix of languages - content in the language
+    requested when available and English for the rest.
+
+    This is also the reason why the `Content-Language` header is not set because the content
+    may include multiple languages.
+
+    ## Timeouts
+
+    The Template API has a general request timeout of 30 seconds. If a request cannot be served within this time a
+    HTTP error 503 is returned and the connection is closed by the server.
+
+    ## Error Handling
+
+    The Template API uses the Problem Details for HTTP APIs as described in
+    [RFC 7807](https://tools.ietf.org/html/rfc7807)
+
+
+    ## Change History
+
+    | API Version | Docs Version | Changes                                                                                                                                      |
+    |-------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+    | 1.0         | 15.02.2024   | Initial endpoints for publishing and archiving templates |
+
+
+    # Authentication
+
+    The Template API enforces authentication which can be done using either API keys or the
+    session cookie.
+
+    All API requests must be made over HTTPS.
+
+    # API Endpoint
+
+    The domains below don't apply if domain white-labeling has been configured for your setup, e.g.,
+    you use https://int.your-company.com.
+
+    **PRODUCTION**
+
+    https://api.tripbuilder.app
+
+    **STAGING**
+
+    https://api.stg.tripbuilder.app
+
+  contact:
+    url: https://nezasa.com/contact-us/
+    email: support@nezasa.com
+  version: '1'
+  x-logo:
+    url: https://nezasa.com/wp-content/uploads/2020/02/nezasa-logo-e1583851738373.png
+servers:
+  - url: https://api.tripbuilder.app/template/api/v1
+tags:
+  - name: Beta
+    description: |
+      Endpoints marked as Beta are currently in BETA phase. This means that both the
+      endpoint as well as the parameters and responses are subject to change. We will
+      due our best to inform users currently on a BETA API about the changes and
+      allow some time (around 2 weeks) for clients to adjust, but we cannot guarantee
+      that the changes will not break existing clients.
+  - name: Template Management
+    description: Operations for managing itinerary templates
+paths:
+  /{tourOperatorId}/templates/{templateId}/publish:
+    post:
+      operationId: publishTemplate
+      tags:
+        - Beta
+        - Template Management
+      parameters:
+        - $ref: '#/components/parameters/tourOperatorId'
+        - $ref: '#/components/parameters/templateId'
+      summary: Publishes a template
+      description: |
+        [BETA] A template can be published to make it available for instantiation. The template must be in a valid state
+        to be published. The response contains the unique identifier of the published template and thus can be used
+        to redirect the user to the planner with that template opened.
+
+        The {templateId} is the ID of the latest template in Draft status that should be published.
+
+        __Example__
+
+        Request:
+
+        ```
+        POST https://rubytours.tripbuilder.app/template/api/v1/templates/t0000100/publish
+        ```
+
+        Response:
+        ```
+        {
+          "id": "t0000100",
+          "revision": 2,
+          "status": "Published",
+          "meta": {
+            "notifications":[
+              {
+                "notificationType": "GeneralInfo",
+                "message": "The template has been published successfully."
+              }
+            ]
+          }
+        }
+
+      responses:
+        '200':
+          description: |
+            Returns a PublishResponse object containing the template id and revision
+            and possibly a meta object holding addition information and/or warnings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishResponse'
+        '400':
+          description: The template could not be published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+
+  /{tourOperatorId}/templates/{templateId}/archive:
+    post:
+      operationId: archiveTemplate
+      tags:
+        - Beta
+        - Template Management
+      parameters:
+        - $ref: '#/components/parameters/tourOperatorId'
+        - $ref: '#/components/parameters/templateId'
+      summary: Archives a template
+      description: |
+        [BETA] A template can be archived to make it unavailable for instantiation.
+
+        __Example__
+
+        Request:
+
+        ```
+        POST https://rubytours.tripbuilder.app/template/api/v1/templates/t0000100/archive
+        ```
+
+        Response:
+        ```
+        {
+          "id": "t0000100",
+          "revision": 2,
+          "status": "Archived",
+          "meta": {
+            "notifications":[
+              {
+                "notificationType": "GeneralInfo",
+                "message": "The template has been archived successfully."
+              }
+            ]
+          }
+        }
+
+      responses:
+        '200':
+          description: |
+            Returns an ArchiveResponse object containing the template id and revision
+            and possibly a meta object holding addition information and/or warnings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArchiveResponse'
+        '400':
+          description: The template could not be published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+components:
+  parameters:
+    tourOperatorId:
+      name: tourOperatorId
+      in: path
+      required: true
+      description: The unique identifier of the tour operator
+      schema:
+        type: string
+        example: rubytours
+    templateId:
+      name: templateId
+      in: path
+      required: true
+      description: The unique identifier of the template
+      schema:
+        type: string
+        example: t0000100
+
+  schemas:
+    ProblemResponse:
+      type: object
+      description: An array of Problem objects
+      required:
+        - status
+        - problems
+      properties:
+        status:
+          type: integer
+          format: int32
+          description: The HTTP status code generated for this problem response
+          minimum: 100
+          maximum: 600
+          exclusiveMaximum: true
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/Problem'
+
+    Problem:
+      type: object
+      description: A Problem object inspired by https://tools.ietf.org/html/rfc7807 (Problem Details for HTTP APIs)
+      required:
+        - code
+        - detail
+        - level
+      properties:
+        code:
+          type: string
+          description: A specific code narrowing the type of Problem down
+          example: 'InputValidation'
+        detail:
+          type: string
+          description: A human readable explanation (localized to the language of the user) of this problem
+        level:
+          type: string
+          description: The severity of the problem
+          enum:
+            - ERROR
+            - WARNING
+        source:
+          $ref: '#/components/schemas/ProblemSource'
+
+    ProblemSource:
+      required:
+        - pointer
+      type: object
+      properties:
+        pointer:
+          type: string
+          description: A reference to the associated entity in the request document which caused the problem
+          example: '"/data" for a primary data object or "/title" for a specific attribute'
+      description: An object containing references to the source of the error
+
+    Meta:
+      required:
+        - notifications
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+
+    Notification:
+      required:
+        - message
+        - notificationType
+      type: object
+      properties:
+        notificationType:
+          type: string
+          enum:
+            - GeneralInfo
+            - GeneralError
+            - ServiceUnavailable
+            - NotAuthorized
+        message:
+          type: string
+          description:
+            Field containing the general warning / information to display
+            to the user
+
+    PublicationStatus:
+      type: string
+      enum:
+        - Draft
+        - Published
+        - Archived
+
+    PublishResponse:
+      required:
+        - id
+        - revision
+        - status
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the published template
+        revision:
+          type: integer
+          description: The revision of the published template
+        status:
+          $ref: '#/components/schemas/PublicationStatus'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    ArchiveResponse:
+      required:
+        - id
+        - revision
+        - status
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the archived template
+        revision:
+          type: integer
+          description: The revision of the archived template
+        status:
+          $ref: '#/components/schemas/PublicationStatus'
+        meta:
+          $ref: '#/components/schemas/Meta'

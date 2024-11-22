@@ -1,0 +1,445 @@
+openapi: 3.0.3
+info:
+  version: '1.13'
+  title: Booking API
+  description: |
+    # Introduction
+    The Booking API provides access to TripBuilder bookings. This API definition currently only covers
+    the payment transaction part of the Booking API.
+
+    ## Doc Version
+    Last Updated: 2023-12-19
+
+    ## Compression
+    All endpoints in the API support gzip compression for both request and response payloads. Most 
+    client side frameworks have built-in support for gzip encoding as well. Compressing API payloads 
+    improves an application's performance and reduces bandwidth consumption by sending and receiving 
+    smaller payloads.
+
+    ## Localization
+    When applicable, the localization parameters are determined through a series of checks on the 
+    existing cookies (which are part of the request) as well as the default values defined by 
+    underlying distribution channel configuration.
+
+    ### Language
+    When applicable, the steps to determine the language parameter are as follows.
+
+    1. The "lang" HTTP-Cookie is present together with the languages defined in the "Accept-Language" header
+       are concatenated together to form a list of language code. The language from the HTTP-Cookie is
+       first in the list since it takes precedence over the "Accept-Language" header.
+
+    2. The list of languages from step (1) is checked against the distribution channel's default communication
+       language as well as the list of languages supported by this distribution channel. The first language
+       in the list from step (1) which satisfies the condition of being supported by the distribution channel
+       is taken as the localization language parameter to use.
+
+    3. If none of the languages from step (1) satisfies any of the the distribution channel's supported languages,
+       then we either take the first language from the list from step (1) or we default to EN.
+
+    ## Timeouts
+    The Booking API has a general request timeout of 30 seconds. If a request cannot be served within this time a
+    HTTP error 503 is returned and the connection is closed by the server.
+
+    ## Error Handling
+    The API uses conventional HTTP response codes to indicate the success or failure of an API request. In general,
+    codes in the 2xx range indicate success, while codes in the 4xx range indicate an error that failed given the
+    information provided (e.g., a required parameter was omitted or is in the wrong format), and codes in the 5xx
+    range indicate an error within TripBuilder.
+
+    ## Host
+    The host api.nezasa.com is used as placeholder in this documentation. The actual host to be used may be
+    a white-labelled domain of your TripBuilder setup.
+
+    ## Change History
+
+    | API Version | Docs Version | Changes                                                                                                |
+    |-------------|--------------|--------------------------------------------------------------------------------------------------------|
+    | 1.13        |  14.11.2023  | Initial                                                                                                |
+    | 1.13        |  19.12.2023  | Added amount to CommonMonetaryValue object                                                             |
+    | 1.13        |  09.08.2024  | Added status to CreatePaymentTransactionRequest and UpdatePaymentTransactionRequest objects            |
+    | 1.13        |  11.10.2024  | Added paymentMethodName to PaymentTransaction object                                                   |
+
+    # Authentication
+    Authenticate your account when using the API by including your secret API key in the request.
+    Your API keys carry many privileges, so be sure to keep them secret! Do not share your secret API keys
+    in publicly accessible areas such as GitHub, client-side code, and so forth. Authentication to the API
+    is performed via HTTP Basic Auth. Provide your account ID as the basic auth username and the API secret
+    as the basic auth password.
+
+    All API requests must be made over HTTPS.
+  contact:
+    email: support@nezasa.com
+    url: https://nezasa.com/contact-us/
+  x-logo:
+    url: https://nezasa.com/wp-content/uploads/2020/02/nezasa-logo-e1583851738373.png
+servers:
+  - url: https://api.nezasa.com
+    description: production mock server
+security:
+  - BasicAuth: []
+paths:
+  /payment-transactions/{version}/{checkoutRefId}/create:
+    post:
+      tags:
+        - Create a Payment Transaction
+      summary: Creates a payment transaction
+      operationId: BookingAPIV113_CreatePaymentTransaction
+      parameters:
+        - name: version
+          description: Identifies the version of the API
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: checkoutRefId
+          description: Identifies the booking in which to create the transaction
+          in: path
+          schema:
+            type: string
+          required: true
+      requestBody:
+        description: The request body.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentTransactionRequest'
+      responses:
+        '200':
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentTransactionResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+  /payment-transactions/{version}/{checkoutRefId}/update/{transactionRefId}:
+    patch:
+      tags:
+        - Update a Payment Transaction
+      summary: Updates a payment transaction
+      operationId: BookingAPIV113_UpdatePaymentTransaction
+      parameters:
+        - name: version
+          description: Identifies the version of the API
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: checkoutRefId
+          description: Identifies the booking in which to update the transaction
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: transactionRefId
+          description: Identifies the transaction which must be updated
+          in: path
+          schema:
+            type: string
+          required: true
+      requestBody:
+        description: The request body.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePaymentTransactionRequest'
+      responses:
+        '200':
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentTransactionResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+  /payment-transactions/{version}/{checkoutRefId}/delete/{transactionRefId}:
+    delete:
+      tags:
+        - Delete a Payment Transaction
+      summary: Deletes a payment transaction
+      operationId: BookingAPIV113_DeletePaymentTransaction
+      parameters:
+        - name: version
+          description: Identifies the version of the API
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: checkoutRefId
+          description: Identifies the booking in which to delete the transaction
+          in: path
+          schema:
+            type: string
+          required: true
+        - name: transactionRefId
+          description: Identifies the transaction which must be deleted
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: A successful response.
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+  schemas:
+    CommonMonetaryValue:
+      type: object
+      description: a container object for representing a monetary value in the system
+      required:
+        - currency
+        - value
+      properties:
+        currency:
+          description: The ISO-4217 currency code (e.g. EUR, USD, etc)
+          type: string
+          format: iso-4217
+        value:
+          description: |
+            The monetary value whereby the major and minor currency units are separated by a decimal (e.g. "29.95").
+            This property is deprecated in favor of amount. Please start including amount in your requests.
+          type: string
+          pattern: ^\d+\.\d{2}$
+          deprecated: true
+        amount:
+          description: |
+            The monetary value whereby the major and minor currency units are separated by a decimal (e.g. "29.95"). 
+            If both amount and value are included, amount will be used.
+          type: string
+          pattern: ^\d+\.\d{2}$
+    TransactionType:
+      description: Indicates whether the transaction is a payment or a refund.
+      type: string
+      enum:
+        - Payment
+        - Refund
+    PaymentMethod:
+      description: |
+        The method of the payment
+        Only the payment methods "CreditCard", "BankTransfer", "DirectDebit", and "Other" are supported when creating or changing payment transactions, while the other
+        payment methods may be returned in existing payment transactions.
+      type: string
+      enum:
+        - CreditCard
+        - BankTransfer
+        - DirectDebit
+        - Paypal
+        - Datatrans
+        - Invoice
+        - Payyo
+        - Stripe
+        - Future
+        - Other
+        - Unknown
+    StatusType:
+      description: |
+        Indicates the status of the transaction.
+        When creating payment transactions only the status "Open" and "Closed" are supported.
+        When updating payment transactions only the status "Closed" is supported.
+        The other statuses may be returned in existing payment transactions.
+      type: string
+      enum:
+        - Open
+        - InProgress
+        - PreauthCaptureInProgress
+        - Pending
+        - Preauth
+        - Closed
+        - Failed
+        - Deleted
+        - Unknown
+    CreatePaymentTransactionRequest:
+      type: object
+      required:
+        - externalRefId
+        - amount
+        - transactionType
+        - paymentMethod
+      properties:
+        externalRefId:
+          description: The ref id identifying this particular transaction in the external system
+          type: string
+        amount:
+          $ref: '#/components/schemas/CommonMonetaryValue'
+        transactionType:
+          $ref: '#/components/schemas/TransactionType'
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        paymentMethodName:
+          description: Must only be used in combination with the payment method "Other" in which case it is mandatory.
+          type: string
+          example: Apple Pay
+        created:
+          description: The date and time the transaction was created. Defaults to the current date and time if not set.
+          type: string
+          format: RFC 3339
+          example: '2023-08-31T12:00:27.87+01:00'
+        valuta:
+          description: The valuta date and time of the transaction. Defaults to the current date and time if not set.
+          type: string
+          format: RFC 3339
+          example: '2023-08-31T12:00:27.87+01:00'
+        dueDate:
+          description: The due date and time of the transaction
+          type: string
+          format: RFC 3339
+          example: '2023-08-31'
+        status:
+          $ref: '#/components/schemas/StatusType'
+    ProblemSource:
+      description: An object containing references to the source of the error
+      type: object
+      required:
+        - pointer
+      properties:
+        pointer:
+          description: A reference to the associated entity in the request document which caused the problem
+          type: string
+          example: '"/data" for a primary data object or "/title" for a specific attribute'
+    Problem:
+      description: A Problem object inspired by https://tools.ietf.org/html/rfc7807 (Problem Details for HTTP APIs)
+      type: object
+      required:
+        - code
+        - detail
+        - level
+      properties:
+        code:
+          description: A specific code narrowing the type of Problem down
+          type: string
+          example: InputValidation
+        detail:
+          description: A human readable explanation (localized to the language of the user) of this problem
+          type: string
+        level:
+          description: The severity of the problem
+          type: string
+          enum:
+            - ERROR
+            - WARNING
+        source:
+          $ref: '#/components/schemas/ProblemSource'
+    ProblemResponse:
+      description: An array of Problem objects
+      type: object
+      required:
+        - status
+        - problems
+      properties:
+        status:
+          description: The HTTP status code generated for this problem response
+          type: integer
+          format: int32
+          minimum: 100
+          maximum: 600
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/Problem'
+    PaymentTransaction:
+      description: The created or updated payment transaction
+      type: object
+      required:
+        - transactionRefId
+        - status
+        - amount
+        - transactionType
+        - paymentMethod
+        - created
+        - valuta
+      properties:
+        transactionRefId:
+          description: The ref id identifying this particular transaction
+          type: string
+        externalRefId:
+          description: The ref id identifying this particular transaction in the external system
+          type: string
+        status:
+          $ref: '#/components/schemas/StatusType'
+        amount:
+          $ref: '#/components/schemas/CommonMonetaryValue'
+        transactionType:
+          $ref: '#/components/schemas/TransactionType'
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        paymentMethodName:
+          description: The name of the payment method if the payment method is Other
+          type: string
+        paymentServiceProviderPaymentMethod:
+          description: The online payment service provider's payment method
+          type: string
+        paymentServiceProviderId:
+          description: The online payment service provider's id
+          type: string
+        created:
+          description: The date and time the transaction was created. Defaults to the current date and time if not set.
+          type: string
+          format: RFC 3339
+          example: '2023-08-31T12:00:27.87+01:00'
+        valuta:
+          description: The valuta date and time of the transaction. Defaults to the current date and time if not set.
+          type: string
+          format: RFC 3339
+          example: '2023-08-31T12:00:27.87+01:00'
+        dueDate:
+          description: The due date and time of the transaction
+          type: string
+          format: RFC 3339
+          example: '2023-08-31'
+    PaymentTransactionResponse:
+      type: object
+      required:
+        - transaction
+      properties:
+        transaction:
+          $ref: '#/components/schemas/PaymentTransaction'
+    UpdatePaymentTransactionRequest:
+      type: object
+      properties:
+        externalRefId:
+          description: The ref id identifying this particular transaction in the external system
+          type: string
+        amount:
+          $ref: '#/components/schemas/CommonMonetaryValue'
+        transactionType:
+          $ref: '#/components/schemas/TransactionType'
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        paymentMethodName:
+          description: Must only be used in combination with the payment method "Other" in which case it is mandatory.
+          type: string
+          example: Apple Pay
+        created:
+          description: The date and time the transaction was created. Defaults to the current date and time if not set.
+          type: string
+          format: RFC 3339
+          example: '2023-08-31T12:00:27.87+01:00'
+        valuta:
+          description: The valuta date and time of the transaction. Defaults to the current date and time if not set.
+          type: string
+          format: RFC 3339
+          example: '2023-08-31T12:00:27.87+01:00'
+        dueDate:
+          description: The due date and time of the transaction
+          type: string
+          format: RFC 3339
+          example: '2023-08-31'
+        status:
+          $ref: '#/components/schemas/StatusType'

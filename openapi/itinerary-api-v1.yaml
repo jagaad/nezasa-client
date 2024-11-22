@@ -1,0 +1,1520 @@
+openapi: 3.0.1
+info:
+  title: Itinerary API
+  description: |
+    # Introduction
+
+    The Nezasa Itinerary API provides RESTful services for creating Nezasa itineraries based on templates.
+    JSON is returned by all API responses including errors.
+
+    The JSON model used by the Nezasa Itinerary API follows the convention specified by JSON API 1.0
+    (see https://jsonapi.org/).
+
+    ## Doc Version
+
+    Last Updated: 2024-09-30
+
+    ## Compression
+
+    All endpoints in the REST API support gzip compression for both request and response payloads. Most client side
+    frameworks have built-in support for gzip encoding as well. Compressing API payloads improves an application's
+    performance and reduces bandwidth consumption by sending and receiving smaller payloads.
+
+    ## Content Type
+
+    The Nezasa Itinerary API sends all JSON API data in response documents with the header
+    `Content-Type: application/vnd.api+json` without any media type parameters. This media type must also be set
+    in the `Accept` header.
+
+    ## Localization
+
+    Specifying localization parameters can be done via HTTP headers. Headers typically work quite nicely as URIs are
+    unaffected, supported by all HTTP methods and don't affect GET caching. Language codes can be set with the HTTP
+    header "Accept-Language" and support language negotiation. The protocol for language negotiation is similar to
+    media type negotiation. The client expresses its intent by supplying an Accept-Language header with acceptable
+    languages and their q header parameter values, and the server decides which one to use for the response.
+
+    Example:
+
+    ```
+    GET /itineraries/v1.0/basdgsdgs HTTP/1.1
+    Host: nicetours-ibe.tripbuilder.app
+    Accept-Language: en,en-US,fr;q=0.6
+    ```
+
+    ```
+    HTTP/1.1 200 OK
+    Vary: Accept-Encoding
+    ```
+
+    The codes submitted are the 2-letter language codes in lower-case letters or the 5-letter codes consisting of a
+    language code and the region code (e.g., en-US, en-CA, de-CH).
+
+    ### Content Language Response
+
+    The API will attempt to return content in the specified language when available. In cases where content or an item
+    of content is not available in the requested language, it will fallback to EN. This means that the caller may receive
+    a mix of languages - content in the language requested when available and English for the rest.
+
+    This is also the reason why the `Content-Language` header is not set because the content may include multiple languages.
+
+    ## Timeouts
+
+    The Itinerary API has a general request timeout of 30 seconds. If a request cannot be served within this time a
+    HTTP error 503 is returned and the connection is closed by the server.
+
+    ## Error Handling
+
+    Nezasa uses conventional HTTP response codes to indicate the success or failure of an API request. In general,
+    codes in the 2xx range indicate success, codes in the 4xx range indicate an error that failed given the
+    information provided (e.g., a required parameter was omitted or is in the wrong format), and codes in the 5xx
+    range indicate an error with Nezasa's servers.
+
+    ## Host
+
+    The host api.tripbuilder.app is used as placeholder in this documentation. The actual host to be used may be
+    a white-labelled domain of your TripBuilder setup.
+
+    ## FAQ
+
+    ### Question
+
+
+    ## Change History
+
+    | API Version | Docs Version | Changes                                                                                                                                      |
+    |-------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+    | 1.0         | 14.06.2017   | Separate itinerary API from Discovery API to make accessible for CRS integration use cases. |
+    | 1.0         | 24.08.2018   | Documented child age support in API call to create an itinerary. |
+    | 1.0         | 17.10.2018   | Optional departure airport can be defined in the API call to create an itinerary. |
+    | 1.0         | 15.04.2019   | Feature to instantiate a new itinerary including an international flight has been introduced. See attributes `instantiateWith` and `departureAirportCode`. |
+    | 1.0         | 13.05.2019   | Documentation for the selection strategy of flights |
+    | 1.0         | 07.06.2019   | Add `childrenBirthDates` support |
+    | 1.0         | 23.12.2019   | Change staging and dev domains |
+    | 1.0         | 06.01.2020   | Add documentation for accommodation hints |
+    | 1.0         | 13.03.2020   | Add documentation for instantiating from-scratch itineraries. |
+    | 1.0         | 03.09.2020   | Corrected documentation mistake regarding startLocationRef and endLocationRef parameter. |
+    | 1.0         | 22.04.2022   | <ul><li>`agencyRefId` is added to both request bodies, it is now possible to enter the travel agency id which creates an itinerary</li><li>`departureLocationRef` replaces `departureAirportCode`,it is now possible to add an area as a departure location as well as an airport.</li></ul> |
+    | 1.0         | 24.05.2022   | <ul><li>Hints attribute is removed from the "Itinerary - Create One (From Scratch)" request body</li><li>Hints attribute from the "Itinerary - Create One (From a Template)", stop index information is added.</li><ul> |
+    | 1.0         | 05.04.2023   | Added a new itinerary instantiation method |
+    | 1.0         | 29.11.2023   | The from-scratch endpoint was extended to support the definition of an itinerary skeleton |
+    | 1.0         | 14.02.2024   | The from-scratch endpoint was extended to support automatic hotel instantiation |
+    | 1.0         | 05.03.2024   | The from-scratch endpoint was extended to support adhoc service instantiation |
+    | 1.0         | 29.05.2024   | Use *.tripbuilder.app consistently throughout the document |
+    | 1.0         | 29.05.2024   | The from-scratch endpoint was extended to support stop activities |
+    | 1.0         | 12.06.2024   | The from-scratch endpoint was extended to support the definition of an itinerary title |
+    | 1.0         | 30.09.2024   | Added documentation for from-pnr endpoint |
+
+    # Authentication
+
+    The Itinerary API doesn't enforce authentication. If itinerary creation is required in a public facing scenario then
+    use the endpoint https://<white-label-ID>-ibe.tripbuilder.app without any authentication.
+
+    In case the API is used in a scenario with the Nezasa Booking API (e.g, for CRS integrations) the same endpoint as
+    for the Booking API can be used (https://api.tripbuilder.app). In this scenario the same credentials have to be provided
+    via HTTP BasicAuth. See the Nezasa Booking API for details.
+
+    All API requests must be made over HTTPS.
+
+    # API Endpoint
+
+    The domains below don't apply if domain white-labeling has been configured for your setup, e.g.,
+    you use https://int.your-company.com.
+
+    **PRODUCTION**
+
+    https://<white-label-ID>-ibe.tripbuilder.app (for unauthenticated calls) or
+    https://api.tripbuilder.app (for authenticated calls)
+
+    **STAGING**
+
+    https://<white-label-ID>-ibe.stg.tripbuilder.app (for unauthenticated calls) or
+    https://api.stg.tripbuilder.app (for authenticated calls)
+
+  contact:
+    url: https://nezasa.com/contact-us/
+    email: support@nezasa.com
+  version: '1.0'
+  x-logo:
+    url: https://nezasa.com/wp-content/uploads/2020/02/nezasa-logo-e1583851738373.png
+servers:
+  - url: https://api.tripbuilder.app/itinerary/v1.0/
+paths:
+  /itineraries:
+    post:
+      summary: Create itinerary from template
+      description: |
+        Instantiates an itinerary from a template. The response contains the unique identifier of the itinerary and
+        thus can be used to redirect the user to the planner with that itinerary opened.
+
+        The itinerary creation is used in B2B and B2C use cases in slightly different variations. The examples below
+        show the different use cases.
+
+        __Example: B2C Use Case__
+
+        Request:
+
+        ```
+        POST https://nicetours-ibe.tripbuilder.app/itinerary/v1.0/itineraries
+
+        {
+          "tripRefId": "t0000100",
+          "startDate": "2017-06-24",
+          "allocatedPax": {
+            "rooms": [
+              {
+                "adults": 2,
+                "roomPreferences": [
+                  "DoubleBed"
+                ],
+                "childAges": [3, 8],
+              }
+            ]
+          },
+          "accommodationLevel": "Recommended",
+          "alternativeModules": [
+            "m0000198"
+          ],
+          "agencyRefId": "NICETOURSTEST"
+        }
+
+        ```
+
+        Response:
+
+        ```
+        {
+          "data":{
+            "type": "itinerary",
+            "id": "z6scmambpqza",
+            "attributes": {
+              "refId": "z6scmambpqza",
+              "title": "TEST Südkalifornien - Mietwagenrundreise"
+            }
+          },
+          "included": [],
+          "meta": {
+            "notifications":[]
+          }
+        }
+
+        ```
+
+        __Example: B2B CRS Integration Use Case__
+
+        Request:
+
+        ```
+        POST https://api.tripbuilder.app/itinerary/v1.0/itineraries
+
+        {
+          "externalRefId": "2010003",
+          "startDate": "2017-06-24",
+          "numPax": {
+            "adults": 5,
+            "children": 0
+          },
+          "departureLocationRef": {
+            "id": "ZRH"
+          },
+          "meta": {
+            "client": "toma/vista",
+            "clientAction": "BA",
+            "agency": "107949"
+          }
+        }
+
+        ```
+
+        Response:
+
+        ```
+        {
+          "data":{
+            "type": "itinerary",
+            "id": "z6scmambpqza",
+            "attributes": {
+              "refId": "z6scmambpqza",
+              "title": "TEST Südkalifornien - Mietwagenrundreise",
+              "crsClient": {
+                "url": "https://nicetours.tripbuilder.app/auth/token?t=807482572c4cc74a22cf6f70479d768d3b2da905fdd2fc3dda583366bd5d184c&nz-url=iz6scmambpqza"
+              }
+            }
+          },
+          "included": [],
+          "meta": {
+            "notifications":[]
+          }
+        }
+
+        ```
+
+
+        __Example: Instantiate New Itinerary incl. International Flight__
+
+        If a new itinerary including the international flight shall be created this can be controlled with the
+        attribute `instantiateWith` in the request body. International flights can be created under the following
+        conditions:
+
+        - Your TripBuilder instance has to be configured with a GDS integration to search and book flights
+        - The number of adult PAX needs to be specified in the request
+        - The departure airport needs to be defined using a 3-letter IATA airport code
+        - The GDS integration needs to deliver results within 25 seconds
+
+        From the flight search result the best flight is picked using the following strategy:
+        - At maximum 3 flight legs per outbound or inbound flight
+        - The flight with the cheapest fare is chosen
+
+        ```
+        POST /itinerary/v1.0/itineraries
+
+        {
+          "tripRefId": "t123123",
+          "startDate": "2019-06-20",
+          "numPax":{
+            "adults": 2,
+            "children: 0
+          },
+          "departureLocationRef": {
+            "id": "ZRH"
+          },
+          "instantiateWith": [
+            "international-flights"
+          ]
+        }
+        ```
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/FromTemplateRequest'
+        required: true
+      responses:
+        '200':
+          description: |
+            Returns an ItineraryResponse object containing the itinerary identifier
+            and possibly a meta object holding addition information and/or warnings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItineraryResponse'
+        '400':
+          description: The itinerary could not be created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-codegen-request-body-name: body
+  /from-scratch:
+    post:
+      summary: Create itinerary from scratch
+      description: |
+        Instantiates an itinerary from given start and end locations. The feature must be explicitly enabled.
+        The response contains the unique identifier of the itinerary and thus can be used to redirect the user
+        to the planner with that itinerary opened. Usually it is a good idea to redirect users to the route
+        editor which allows them to customize the route.
+
+        __Example: B2B CRS Integration Use Case__
+
+        Request:
+
+        ```
+        POST https://nicetours-ibe.tripbuilder.app/itinerary/v1.0/from-scratch
+
+        {
+          "startDate": "2020-03-19",
+          "allocatedPax": {
+            "rooms": [
+              {
+                "adults": 2,
+                "roomPreferences": [
+                  "DoubleBed"
+                ],
+                "childAges": [3,8],
+                "paxInfo":[
+                  {
+                    "isAdult": true
+                  },
+                  {
+                    "isAdult": true
+                  }
+                ]
+              }
+            ]
+          },
+          "startLocationRef": {
+            "id": "JFK"
+          },
+          "endLocationRef":{
+            "id": "JFK"
+          },
+          "departureLocationRef":{
+            "id": "MUC"
+          },
+          "agencyRefId": "NICETOURSTEST"
+        }
+
+        ```
+
+        Response:
+
+        ```
+        {
+          "data":{
+            "type": "itinerary",
+            "id": "z6scmambpqza",
+            "attributes": {
+              "refId": "z6scmambpqza",
+              "title": "TEST Südkalifornien - Mietwagenrundreise",
+              "crsClient": {
+                "url": "https://nicetours.tripbuilder.app/auth/token?t=807482572c4cc74a22cf6f70479d768d3b2da905fdd2fc3dda583366bd5d184c&nz-url=iz6scmambpqza"
+              }
+            }
+          },
+          "included": [],
+          "meta": {
+            "notifications":[]
+          }
+        }
+        ```
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/FromScratchRequest'
+        required: true
+      responses:
+        '200':
+          description: |
+            Returns an ItineraryResponse object containing the itinerary identifier
+            and possibly a meta object holding addition information and/or warnings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItineraryResponse'
+        '400':
+          description: The itinerary could not be created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-codegen-request-body-name: body
+  /from-pnr:
+    post:
+      summary: Create itinerary from a set of PNRs
+      description: |
+        Instantiates an itinerary from a list of PNRs. We build the transports and from them we build an
+        itinerary where the stops match the created transports. This feature must be explicitly enabled.
+        The response contains the unique identifier of the itinerary and thus can be used to redirect the user
+        to the planner with that itinerary opened. Usually it is a good idea to redirect users to the route
+        editor which allows them to customize the route.
+
+        Request:
+
+        ```
+        POST https://nicetours.tripbuilder.app/itinerary/v1.0/from-pnr
+
+        {
+          "startDate": "2024-10-19",
+            "segments": [
+            {
+              "pnrLocator": "ABC123",
+              "reservationSystem": "GDS1",
+              "supplier": "AirlineXYZ",
+              "supplierRefId": "REF456",
+              "netPrice": {
+                "amount": 200.50,
+                "currency": "USD"
+              },
+              "salesPrice": {
+                "amount": 250.75,
+                "currency": "USD"
+              },
+              "surcharge": {
+                "amount": 25.00,
+                "currency": "USD"
+              }
+            },
+            {
+              "pnrLocator": "DEF789",
+              "reservationSystem": "GDS2",
+              "supplier": "HotelABC",
+              "supplierRefId": "REF789",
+              "netPrice": {
+                "amount": 300.00,
+                "currency": "EUR"
+              },
+              "salesPrice": {
+                "amount": 350.00,
+                "currency": "EUR"
+              },
+              "surcharge": {
+                "amount": 30.00,
+                "currency": "EUR"
+              }
+            }
+        ],
+          "aerAgencyNumber": "AGENCY123",
+          "allocatedPax": {
+            "adults": 2,
+            "children": 1
+          }
+        }
+
+        ```
+
+        Response:
+
+        ```
+        {
+          "data":{
+            "type": "itinerary",
+            "id": "z6scmambpqza",
+            "attributes": {
+              "refId": "z6scmambpqza",
+              "title": "TEST Südkalifornien - Mietwagenrundreise",
+            }
+          },
+          "included": [],
+          "meta": {
+            "notifications":[]
+          }
+        }
+        ```
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/FromPullPnrRequest'
+        required: true
+      responses:
+        '200':
+          description: |
+            Returns an ItineraryResponse object containing the itinerary identifier
+            and possibly a meta object holding addition information and/or warnings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItineraryResponse'
+        '400':
+          description: The itinerary could not be created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-codegen-request-body-name: body
+
+  /pull-pnr-info:
+    get:
+      summary: Retrieve PNR Information
+      description: |
+        Retrieves passenger and pricing information from a specified PNR. This endpoint provides flexibility to include additional PNR data in the future.
+
+        Request:
+
+        ```
+        GET https://nicetours.tripbuilder.app/itinerary/v1.0/pull-pnr-info?pnrLocator=ABC123&reservationSystem=GDS1&aerAgencyNumber=AGENCY123
+        ```
+
+        Response:
+
+        ```
+        {
+          "paxInfo": [
+            {
+              "firstName": "John",
+              "lastName": "Doe",
+              "gender": "Male",
+              "birthDate": "1980-01-01",
+              "age": 40
+            }
+          ],
+          "netPrice": {
+            "amount": 200.50,
+            "currency": "USD"
+          }
+        }
+        ```
+      parameters:
+        - name: pnrLocator
+          in: query
+          required: true
+          description: The PNR locator code
+          schema:
+            type: string
+        - name: reservationSystem
+          in: query
+          required: true
+          description: The reservation system identifier
+          schema:
+            type: string
+        - name: lastName
+          in: query
+          required: true
+          description: A pax last name
+          schema:
+            type: string
+        - name: aerAgencyNumber
+          in: query
+          required: false
+          description: The aer agency number
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Returns PNR information including passenger details and net pricing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullPnrInfoResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: PNR not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    FromPullPnrRequest:
+      type: object
+      description: Pull PNR Itinerary Request
+      required:
+        - segments
+      properties:
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/FromPullPnrRequestSegment'
+          description: List of itinerary segments
+        aerAgencyNumber:
+          type: string
+          description: Aer agency number
+        allocatedPax:
+          $ref: '#/components/schemas/PaxAllocationInitParams'
+    FromTemplateRequest:
+      required:
+        - startDate
+      type: object
+      properties:
+        tripRefId:
+          type: string
+          description: |
+            The ID of the trip for which a personalized itinerary has to be created. This denotes Nezasa's
+            internal trip identifier of the itinerary template.
+
+            Either `tripRefId` or `externalRefId` must be provided.
+          example: t123456
+        externalRefId:
+          type: string
+          description: |
+            The ID of the trip as it's used in a 3rd party system (e.g., the identifier of the trip in a
+            customer system that is taken over during an import).
+
+            Either `tripRefId` or `externalRefId` must be provided.
+        accommodationLevel:
+          $ref: '#/components/schemas/AccommodationLevelPreference'
+        allocatedPax:
+          $ref: '#/components/schemas/PaxAllocationInitParams'
+        agencyRefId:
+          $ref: '#/components/schemas/AgencyRefId'
+        numPax:
+          $ref: '#/components/schemas/NumPax'
+        startDate:
+          $ref: '#/components/schemas/StartDate'
+        alternativeModules:
+          $ref: '#/components/schemas/AlternativeModules'
+        firstName:
+          $ref: '#/components/schemas/ContactFirstName'
+        lastName:
+          $ref: '#/components/schemas/ContactLastName'
+        email:
+          $ref: '#/components/schemas/ContactEmail'
+        departureLocationRef:
+          $ref: '#/components/schemas/LocationReference'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        instantiateWith:
+          $ref: '#/components/schemas/InstantiateWith'
+        hints:
+          type: array
+          description: |
+            An object that defines the instantiation hints for the accommodations. The key is the stop index and the value
+            is the accommodation ID. The stop index is the index of the stop in the itinerary, starting with 0.
+
+            If an accommodation is hinted and is not available, the stop is created without an accommodation.
+          items:
+            $ref: '#/components/schemas/InstantiationHint'
+        meta:
+          $ref: '#/components/schemas/ClientMeta'
+        externalCustomerId:
+          $ref: '#/components/schemas/ExternalCustomerId'
+
+    FromScratchRequest:
+      required:
+        - startDate
+      type: object
+      properties:
+        title:
+          type: string
+          description: |
+            The title of the itinerary. If not provided, the system will generate a title based on the start and end locations.
+        departureLocationRef:
+          $ref: '#/components/schemas/LocationReference'
+        startLocationRef:
+          $ref: '#/components/schemas/LocationReference'
+        endLocationRef:
+          $ref: '#/components/schemas/LocationReference'
+        legs:
+          type: array
+          description: |
+            A list of legs defining the newly initialized itinerary. If not defined, the itinerary
+            will be created with a single stop that is located next to the start location in the destination.
+
+            If the start or end locations are not defined, the system will take the first or last leg's location as the
+            start or end location.
+          items:
+            $ref: '#/components/schemas/LegSkeleton'
+        allocatedPax:
+          $ref: '#/components/schemas/PaxAllocationInitParams'
+        agencyRefId:
+          $ref: '#/components/schemas/AgencyRefId'
+        numPax:
+          $ref: '#/components/schemas/NumPax'
+        paxInfo:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaxInfoInitParams'
+        startDate:
+          $ref: '#/components/schemas/StartDate'
+        firstName:
+          $ref: '#/components/schemas/ContactFirstName'
+        lastName:
+          $ref: '#/components/schemas/ContactLastName'
+        email:
+          $ref: '#/components/schemas/ContactEmail'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        externalCustomerId:
+          $ref: '#/components/schemas/ExternalCustomerId'
+
+    ItineraryResponse:
+      type: object
+      properties:
+        data:
+          required:
+            - attributes
+            - id
+            - type
+          type: object
+          properties:
+            type:
+              type: string
+              description: |
+                The type of the resource. Always "itinerary".
+              example: itinerary
+            id:
+              type: string
+              description: |
+                The unique identifier of the created itinerary. Corresponds to the refId of the itinerary.
+              example: z6scmambpqza
+            attributes:
+              required:
+                - refId
+                - title
+              type: object
+              properties:
+                refId:
+                  type: string
+                  description: |
+                    The unique identifier of the created itinerary. Corresponds to the refId of the itinerary.
+                  example: z6scmambpqza
+                title:
+                  type: string
+                  description: |
+                    The localized title of the created itinerary.
+                  example: TEST Südkalifornien - Mietwagenrundreise
+                crsClient:
+                  type: object
+                  properties:
+                    url:
+                      type: string
+                      description: |
+                        The url contained in this object can be used as Alias Link in CRS and performs an automatic login of the
+                        agency in the Nezasa B2B application.
+                  description: |
+                    An object containing information relevant for CRS integration use cases.
+        meta:
+          $ref: '#/components/schemas/Meta'
+    ErrorResponse:
+      required:
+        - errors
+        - status
+      type: object
+      properties:
+        status:
+          maximum: 600
+          exclusiveMaximum: true
+          minimum: 100
+          type: integer
+          description: The HTTP status code generated for this problem response
+          format: int32
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+      description: An array of error objects
+    Error:
+      required:
+        - code
+      type: object
+      properties:
+        code:
+          type: string
+          description: A specific code narrowing the type of Problem down
+          example: InputValidation
+        title:
+          type: string
+          description: |
+            A short, human-readable summary of the problem that SHOULD
+            NOT change from occurrence to occurrence of the problem, except for
+            purposes of localization.
+        detail:
+          type: string
+          description: |
+            A human-readable explanation specific to this occurrence of
+            the problem. Like title, this field’s value can be localized.
+        source:
+          $ref: '#/components/schemas/ProblemSource'
+        meta:
+          $ref: '#/components/schemas/ErrorMeta'
+      description: An error object inspired by https://jsonapi.org/format/#error-objects
+    ErrorMeta:
+      type: object
+      properties:
+        level:
+          type: string
+          description: |
+            The level of the error. Can be either "warning" or "error". If not provided, the default is "error".
+        alias:
+          type: string
+        url:
+          type: string
+    ProblemSource:
+      required:
+        - pointer
+      type: object
+      properties:
+        pointer:
+          type: string
+          description: A reference to the associated entity in the request document which caused the problem
+          example: '"/data" for a primary data object or "/title" for a specific attribute'
+      description: An object containing references to the source of the error
+    Meta:
+      required:
+        - notifications
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+    Notification:
+      required:
+        - message
+        - notificationType
+      type: object
+      properties:
+        notificationType:
+          type: string
+          enum:
+            - GeneralInfo
+            - GeneralError
+            - ServiceUnavailable
+            - NotAuthorized
+        message:
+          type: string
+          description:
+            Field containing the general warning / information to display
+            to the user
+    Currency:
+      type: string
+      description: 'The ISO-4217 currency code (e.g. EUR, USD, etc)'
+      format: iso-4217
+    MonetaryValue:
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: number
+          format: double
+          description: Monetary amount
+        currency:
+          $ref: '#/components/schemas/Currency'
+    FromPullPnrRequestSegment:
+      type: object
+      description: Pull PNR Itinerary Request Segment
+      required:
+        - pnrLocator
+      properties:
+        pnrLocator:
+          type: string
+          description: PNR locator code
+        reservationSystem:
+          type: string
+          description: Reservation system identifier
+        lastName:
+          type: string
+          description: Pax Last Name identifier
+        supplier:
+          type: string
+          description: Supplier name
+        supplierRefId:
+          type: string
+          description: Supplier reference ID
+        netPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+          description: Net price for the segment
+        salesPrice:
+          $ref: '#/components/schemas/MonetaryValue'
+          description: Sales price for the segment
+        surcharge:
+          $ref: '#/components/schemas/MonetaryValue'
+          description: Surcharge applicable to the segment
+    AccommodationLevelPreference:
+      type: string
+      enum:
+        - Recommended
+        - Stars1
+        - Stars2
+        - Stars3
+        - Stars4
+        - Stars5
+    RoomPreferenceType:
+      type: string
+      description: deprecated!
+      enum:
+        - NotAvailable
+        - DoubleBed
+        - TwinBed
+        - Smoking
+        - NonSmoking
+    RoomType:
+      type: string
+      enum:
+        - Single
+        - Double
+        - Triple
+        - Quadruple
+        - Tent
+        - MultiBed
+    StartDate:
+      type: string
+      description: |
+        The start date of the itinerary. The start date must be in the future.
+      format: date
+      example: 2023-08-01
+    AgencyRefId:
+      type: string
+      description: |
+        The travel agency which created an itinerary.
+      example: NICETOURSTEST
+    ContactEmail:
+      type: string
+      description: |
+        The customer's email address if already known. Will be stored on the itinerary as contact details.
+      example: john.doe@mycompany.com
+    ContactFirstName:
+      type: string
+      description: |
+        The customer's first name if already known. Will be stored on the itinerary as contact details.
+      example: John
+    ContactLastName:
+      type: string
+      description: |
+        The customer's last name if already known. Will be stored on the itinerary as contact details.
+      example: Doe
+    PaxAllocationInitParams:
+      required:
+        - rooms
+      type: object
+      properties:
+        rooms:
+          type: array
+          description: |
+            An array of rooms, each room should define the following parameters:
+
+            - adults: number of adult PAX
+            - childAges: optional array of the children's age. Also defines the number of children.
+            - childBirthDates: optional array of the children's birth dates. Format: YYYY-MM-DD. If both childAges
+              and childBirthDates present, then childAges will be overwritten with children's ages on itinerary start
+              date calculated from birth dates. Birth dates can not be after the date of request, and child age on
+              itinerary start date should not be greater than 17.
+            - paxInfo: Optional array of information about each PAX (in case already known).
+            - roomType: Optional room type. If not provided, the system will try to find the best room type based on
+              the number of PAX.
+
+            In general, the order of the paxInfo, childAges, and childBirthDates matter and will be used to determine
+            the PAX allocation.
+          items:
+            required:
+              - adults
+            type: object
+            properties:
+              adults:
+                type: integer
+              roomPreferences:
+                type: array
+                description: deprecated
+                items:
+                  $ref: '#/components/schemas/RoomPreferenceType'
+              roomType:
+                $ref: '#/components/schemas/RoomType'
+              childAges:
+                type: array
+                description: |
+                  The age of the children. Either provide `childAges` or `childBirthDates`.
+                items:
+                  type: number
+                  description: |
+                    The age of the child.
+                  example: 8.0
+              childBirthDates:
+                type: array
+                description: |
+                  The date of birth of the children. Either provide `childAges` or `childBirthDates`.
+                items:
+                  type: string
+                  description: |
+                    Date of birth of the child.
+                  format: date
+                  example: 2000-08-01
+              paxInfo:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaxInfoInitParams'
+    PaxInfoInitParams:
+      required:
+        - isAdult
+      type: object
+      description: An object that defines the information about a PAX.
+      properties:
+        refId:
+          type: string
+          description: |
+            The ID of the PAX. Format: "pax-<number>". The number must be sequential within the itinerary.
+        isAdult:
+          type: boolean
+        birthDate:
+          type: string
+          format: date
+          description: |
+            The birth date of the PAX. Format: YYYY-MM-DD. The birth date can not be after the date of request.
+          example: 2000-08-01
+        firstName:
+          type: string
+        lastName:
+          type: string
+        externalRefId:
+          type: string
+          description: The id was known in the external system of the caller. This ID is not interpreted in any way by the TripBuilder.
+    NumPax:
+      required:
+        - adults
+        - children
+      type: object
+      properties:
+        adults:
+          type: integer
+          description: |
+            The number of adults for the trip.
+          example: 2
+        children:
+          type: integer
+          description: |
+            The number of children for the trip.
+          example: 1
+      description: |
+        An object that defines the number of PAX. If the total number of PAX is defined the system tries to find
+        an optimal occupancy of the PAX over the rooms. This occupancy can later be changed in the Nezasa planner.
+    LocationReference:
+      type: object
+      description: |
+        A reference to a location. The location can be either be defined exactly by providing the location ID,
+        or by means of the descriptive fields `countryCode` and `name`. If both are provided,
+        the location ID takes precedence. Searching by the descriptive fields is best effort and might not always
+        be successful. If it fails, the itinerary creation will fail overall.
+
+        Whenever possible, it is recommended to use the location ID.
+
+        Area search: whenever possible, pass the country code as well to narrow down the search. The search
+        will leverage the area ratings and pick the highest ranked area within the search results. There
+        is no error/warning if the search results return several areas.
+
+        Airport search: always use the ID-based approach for airports. The airport definition by name is not
+        supported because generally, the IATA code of an airport is publicly known and can be used.
+      properties:
+        id:
+          type: string
+          description: |
+            The ID of the location. This is the ID that is used in the Nezasa Locations API. That means that
+            it is either a 3-letter IATA airport code, the area's refId or a Giata ID.
+          example: ZRH
+        idType:
+          type: string
+          description: |
+            The type of the location ID.
+
+            Whenever possible, it is recommended to use the location ID. If not provided, the system checks
+            will try to determine the type of ID automatically, however, only covering TripBuilderAreaId and IataCode.
+
+            If GiataId, the system looks for the accommodation with the given Giata ID and uses the location
+            of the accommodation to search for the area.
+
+            If Atcore is used, the system looks for the accommodation with the given Atcore ID and uses the location
+            of the accommodation to search for the area.
+          enum:
+            - TripBuilderAreaId
+            - IataCode
+            - GiataId
+            - Atcore
+        countryCode:
+          type: string
+          description: |
+            The ISO-3166-1 alpha-2 country code of the country where the location is located.
+        name:
+          type: string
+          description: |
+            The name of the location, e.g., the name of the city, place, square, airport, ...
+        coordinate:
+          $ref: '#/components/schemas/Coordinate'
+        address:
+          $ref: '#/components/schemas/Address'
+    AlternativeModules:
+      type: array
+      description: |
+        ID of the module to be used for a module group when instantiating the itinerary.
+        If not defined, the default module of the group is used.
+      items:
+        type: string
+        example: m0000198
+    InstantiateWith:
+      type: array
+      description: |
+        An array of elements to instantiate with the itinerary. As of today, these are the possible values:
+
+        - `international-flights`
+          - Add the incoming and outgoing flights to the itinerary.
+          - `departureLocationRef` must also be defined in the request in this case.
+
+        Generally speaking, the usage of this attribute will make the instantiation much slower because
+        the system will trigger the searches, e.g., for flights in order to automatically add them to the itinerary.
+      items:
+        type: string
+        enum:
+          - international-flights
+    InstantiationHint:
+      required:
+        - accommodation
+        - stop
+      type: object
+      properties:
+        stop:
+          type: integer
+          description: |
+            The index of the stop in the itinerary, starting with 0.
+        accommodation:
+          type: object
+          properties:
+            refId:
+              type: string
+              description: |
+                The accommodation refId as it is used in the Nezasa Accommodations API.
+              example: p_g_8977peg4
+            giata:
+              type: string
+              description: |
+                The GIATA ID of the accommodation.
+              example: '29701'
+          description: |
+            The accommodation ID. The key is the ID type and the value is the ID. The ID type can be either `refId` or
+            `giata`. One of the two needs to be provided.
+    ClientMeta:
+      type: object
+      properties:
+        client:
+          type: string
+          example: toma/vista
+        clientAction:
+          type: string
+          example: BA
+        agency:
+          type: string
+          example: '107949'
+      description: |
+        An object that defines the meta attributes used for the CRS use case. These are the CRS client that is used,
+        the action performed in the CRS client, and the travel agency identifier. See Nezasa Booking API for more
+        details about the meta attributes for CRS.
+
+        Required for the CRS use case. Or in different words: if this attribute is set this defines that the caller
+        is in a CRS integration use case and the response will deliver attributes required for CRS use cases (such
+        as the URL that can be used as Alias Link in the CRS).
+    ExternalCustomerId:
+      type: string
+      description: |
+        An opaque string, which is stored as part of the itinerary’s initialization parameters.
+
+        Note that the system will not attempt to interpret this external customer id in any way.
+
+        The system will also assume that
+        - this customer id is not security relevant and can be logged and sent to the Google Analytics service.
+        - the external customer id does not leak any PII (Personally Identifiable Information) and is thus GDPR compliant
+    Coordinate:
+      type: object
+      required:
+        - lat
+        - lng
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+    Address:
+      type: object
+      required:
+        - postalCode
+        - street
+        - streetNumber
+        - city
+        - countryCode
+      properties:
+        postalCode:
+          type: string
+        street:
+          type: string
+        streetNumber:
+          type: string
+        city:
+          type: string
+        countryCode:
+          type: string
+          description: |
+            The ISO-3166-1 alpha-2 country code of the country where the location is located.
+    LegSkeleton:
+      type: object
+      properties:
+        stop:
+          $ref: '#/components/schemas/StopSkeleton'
+    ActivityReference:
+      type: object
+      description: |
+        The activity can be referenced in three different ways:
+
+        - activityId: this way, a specific activity is referenced, e.g., by its TripBuilder ID.
+        - activityProperties: this allows to fully define an activity. 
+        The system will create the activity with the given properties.
+        BETA: This feature is in beta and might change in the future.
+      properties:
+        activityId:
+          type: string
+          description: |
+            The ID of the activity.
+          example: 610110492e000013b71e104c
+        activityIdType:
+          type: string
+          description: |
+            The type of the activity ID.
+          enum:
+            - TripBuilderActivityId
+            - Atcore
+        activityProperties:
+          $ref: '#/components/schemas/ActivityProperties'
+        supplierReference:
+          type: string
+          description: |
+            The ID of the activity in the supplier system. It is limited to 2000 characters. This ID is not interpreted in any way by the TripBuilder.
+        bookingReference:
+          type: string
+          description: |
+            The booking reference of the activity. This reference allows the integration partner to uniquely identify the booking. 
+            It is limited to 2000 characters. This ID is not interpreted in any way by the TripBuilder.
+    ActivityProperties:
+      type: object
+      description: |
+        The activity information to create a new activity in the itinerary.
+        BETA: This feature is in beta and might change in the future.
+      required:
+        - title
+        - startDateTime
+        - endDateTime
+      properties:
+        title:
+          type: string
+          description: The title of the activity.
+        description:
+          type: string
+          description: The description of the activity.
+        startDateTime:
+          type: string
+          format: date-time
+          description: The start date and time of the activity. Ex. 2023-08-01T10:00:00
+        endDateTime:
+          type: string
+          format: date-time
+          description: The end date and time of the activity. Ex. 2023-08-01T12:00:00
+        mutable:
+          type: boolean
+          description: Whether the activity is mutable. Default is true.
+        salesPrice:
+          type: number
+          format: double
+          description: The sales price of the activity. Default is 0. The currency is taken from the itinerary.
+        paxAllocation:
+          type: array
+          items:
+            type: integer
+          description: The PAX allocation for the activity.
+    AccommodationReference:
+      type: object
+      description: |
+        The accommodation can be referenced in four different ways:
+
+        - accommodation ID: this way, a specific hotel is referenced, e.g.,
+          by its Giata or TripBuilder ID.
+        - name: this way, a search with a fuzzy match is performed to find
+          the best matching hotels. It's possible that another hotel is taken
+          that has a similar name. The location is derived from the stop location.
+        - accommodationRating: this allows to define a general preference
+          of hotel quality w/o picking a specific hotel. The system then tries
+          to automatically pick a hotel of the given service level.
+        - accommodationProperties: this allows to fully define an accommodation.
+          The system will create the accommodation with the given properties.
+
+        Whenever possible, it is recommended to use the accommodation ID for
+        deterministic results.
+      properties:
+        accommodationId:
+          type: string
+          description: |
+            The ID of the accommodation. The ID is supplier specific. For example, if the supplier is Atcore, the
+            ID is the ID of the accommodation product in AtCore's system.
+          example: p_g_8977peg4
+        provider:
+          type: string
+          description: |
+            The provider of the accommodation. This is the name of the supplier for the accommodation.
+          example: Atcore
+        accommodationIdType:
+          type: string
+          description: |
+            The type of the accommodation ID.
+
+            Whenever possible, it is recommended to define the accommodation ID.
+          enum:
+            - TripBuilderAccommodationId
+            - GiataId
+            - Atcore
+        accommodationName:
+          type: string
+          description: |
+            The name of the accommodation. This is the name that is displayed to the user.
+          example: Hilton
+        accommodationRating:
+          $ref: '#/components/schemas/AccommodationLevelPreference'
+        accommodationProperties:
+          $ref: '#/components/schemas/AccommodationProperties'
+        roomCategory:
+          $ref: '#/components/schemas/AccommodationRoomCategorySelection'
+        supplierReference:
+          type: string
+          description: |
+            The ID of the accommodation in the supplier system. It is limited to 2000 characters. This ID is not interpreted in any way by the TripBuilder.
+        bookingReference:
+          type: string
+          description: |
+            The booking reference of the accommodation. This reference allows the integration partner to uniquely identify the booking. 
+            It is limited to 2000 characters. This ID is not interpreted in any way by the TripBuilder.
+    AccommodationProperties:
+      type: object
+      required:
+        - checkinDateTime
+        - checkoutDateTime
+        - rooms
+      description: |
+        All the details necessary for an accommodation. Each field corresponds to a property of the accommodation.
+      properties:
+        id:
+          type: string
+          description: The ID of the accommodation.
+        supplierName:
+          type: string
+          description: The name of the supplier for the accommodation.
+        name:
+          type: string
+          description: The name of the accommodation.
+        description:
+          type: string
+          description: A short description of the accommodation.
+        rating:
+          type: number
+          format: double
+          description: The star rating of the accommodation.
+        checkinDateTime:
+          type: string
+          format: date
+          description: Check-in date for the accommodation.
+        checkoutDateTime:
+          type: string
+          format: date
+          description: Check-out date from the accommodation.
+        location:
+          $ref: '#/components/schemas/LocationReference'
+        mutable:
+          type: boolean
+          description: Whether the accommodation is mutable. Default is true.
+        supplierConfirmationNumber:
+          type: string
+          description: The confirmation number provided by the supplier, if available.
+        bookingStatus:
+          $ref: '#/components/schemas/BookingStatus'
+        rooms:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomProperties'
+          minItems: 1
+        promoCode:
+          type: string
+        isBedBank:
+          type: boolean
+          description: |
+            Whether the accommodation is a BedBank accommodation. Defaults to false.
+            This is currently not interpreted by the system.
+    AccommodationRoomCategorySelection:
+      type: object
+      description: |
+        The details for which room category to select. Each field acts as a filter to select a given room category.
+      properties:
+        name:
+          type: string
+          description: The room category's display name.
+        roomCode:
+          type: string
+          description: The room category's room code (supplier specific).
+        boardCode:
+          type: string
+          description: The room category's board code (e.g. RO, BB, HB).
+    RoomProperties:
+      type: object
+      description: |
+        Detailed model for a single room in an accommodation.
+      required:
+        - salesPrice
+        - roomName
+        - roomCode
+        - mealCode
+      properties:
+        roomName:
+          type: string
+          example: Standard Room
+          description: The name or type of the room.
+        mealName:
+          type: string
+          example: Breakfast
+          description: The meal plan associated with this room.
+        roomCode:
+          type: string
+          example: STD
+        mealCode:
+          type: string
+          example: BB
+        salesPrice:
+          type: number
+          format: decimal
+          description: The selling price of the accommodation. The currency is taken from the itinerary.
+        roomAllocation:
+          type: array
+          description: |
+            An array of integers where each integer represents the index of a passenger in the `paxInfo` array.
+          items:
+            type: integer
+            description: The index of the passenger in the `paxInfo` array. The index starts with 1.
+    StopSkeleton:
+      required:
+        - nights
+      type: object
+      properties:
+        nights:
+          type: integer
+          description: |
+            The number of nights to spend at this stop. A 0-night stop is possible, but it will be w/o accommodation.
+        location:
+          $ref: '#/components/schemas/LocationReference'
+        accommodation:
+          $ref: '#/components/schemas/AccommodationReference'
+        activities:
+          type: array
+          description: |
+            The activities to be added to this stop. 
+            BETA: This feature is in beta and might change in the future.
+          items:
+            $ref: '#/components/schemas/ActivityReference'
+        description:
+          type: string
+          description: |
+            An optional description for the stop.
+      description: |
+        A stop skeleton defines the defaults of a stop when creating an itinerary: the location, the nights, and
+        the default services (currently accommodations is supported).
+    BookingStatus:
+      type: string
+      enum: &BookingStatus
+        - Open
+        - OnRequest
+        - Booked
+        - NonBookable
+        - Cancelled
+        - None
+    PullPnrInfoResponse:
+      type: object
+      properties:
+        paxInfo:
+          type: array
+          items:
+            type: object
+            properties:
+              firstName:
+                type: string
+                description: Passenger's first name
+              lastName:
+                type: string
+                description: Passenger's last name
+              gender:
+                type: string
+                description: Passenger's gender
+              birthDate:
+                type: string
+                format: date
+                description: Passenger's birth date
+              age:
+                type: integer
+                description: Passenger's age
+        netPrice:
+          type: object
+          properties:
+            amount:
+              type: number
+              format: float
+              description: Net price amount
+            currency:
+              type: string
+              description: Currency of the net price

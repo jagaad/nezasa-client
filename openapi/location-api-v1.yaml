@@ -1,0 +1,844 @@
+swagger: '2.0'
+info:
+  version: '1.0'
+  title: Location API
+  description: |
+    # Introduction
+    The Location API provides RESTful endpoints for locations available within our system.
+    JSON is returned by all API responses including errors.
+
+    ## Doc Version
+    Last Updated: 2024-09-20
+
+    ## Compression
+    All endpoints in the REST API support gzip compression for both request and response payloads. Most client side
+    frameworks have built-in support for gzip encoding as well. Compressing API payloads improves an application's
+    performance and reduces bandwidth consumption by sending and receiving smaller payloads.
+
+    ## Localization
+    The localization parameters are determined through a series of checks on the existing cookies
+    (which are part of the request) as well as the default values defined by underlying distribution
+    channel configuration.
+
+    ### Language
+    The steps to determine the language parameter are as follows.
+
+    1. The "lang" HTTP-Cookie is present together with the languages defined in the "Accept-Language" header
+       are concatenated together to form a list of language code. The language from the HTTP-Cookie is
+       first in the list since it takes precedence over the "Accept-Language" header.
+
+    2. The list of languages from step (1) is checked against the distribution channel's default communication
+       language as well as the list of languages supported by this distribution channel. The first language
+       in the list from step (1) which satisfies the condition of being supported by the distribution channel
+       is taken as the localization language parameter to use.
+
+    3. If none of the languages from step (1) satisfies any of the the distribution channel's supported languages,
+       then we either take the first language from the list from step (1) or we default to EN.
+
+    ## Timeouts
+    The Planner API has a general request timeout of 30 seconds. If a request cannot be served within this time a
+    HTTP error 503 is returned and the connection is closed by the server.
+
+    ## Error Handling
+    Nezasa uses conventional HTTP response codes to indicate the success or failure of an API request. In general,
+    codes in the 2xx range indicate success, codes in the 4xx range indicate an error that failed given the
+    information provided (e.g., a required parameter was omitted or is in the wrong format), and codes in the 5xx
+    range indicate an error with Nezasa’s servers.
+
+    ## Host
+    The host api.tripbuilder.app is used as placeholder in this documentation. The actual host to be used may be
+    a white-labelled domain of your TripBuilder setup.
+
+    ## Change History
+
+    | API Version | Docs Version | Changes                                                                                                |
+    |-------------|--------------|--------------------------------------------------------------------------------------------------------|
+    | 1.0         | 01.04.2021   | <ul><li>Migrated to ReDoc for doc generation</li><li>Improved quality and quality of API doc</li></ul> |
+    | 1.0         | 04.10.2023   | <ul><li>Added origin-airports endpoint to search for airports from which passengers are allowed to depart</li></ul> |
+    | 1.0         | 19.12.2023   | <ul><li>Added origin-areas endpoint to search for areas from which passengers are allowed to depart</li></ul> |
+    | 1.0         | 20.09.2024   | Added v1/countries/calling-codes endpoint                                                              |
+    |             |              |                                                                                                        |
+
+    # Authentication
+    Authenticate your account when using the API by including your secret API key in the request.
+    Your API keys carry many privileges, so be sure to keep them secret! Do not share your secret API keys
+    in publicly accessible areas such as GitHub, client-side code, and so forth. Authentication to the API
+    is performed via HTTP Basic Auth. Provide your account ID as the basic auth username and the API secret
+    as the basic auth password.
+
+    All API requests must be made over HTTPS.
+  contact:
+    email: support@nezasa.com
+    url: 'https://nezasa.com/contact-us/'
+  x-logo:
+    url: 'https://nezasa.com/wp-content/uploads/2020/02/nezasa-logo-e1583851738373.png'
+host: api.tripbuilder.app
+schemes:
+  - https
+securityDefinitions:
+  basicAuth:
+    type: basic
+# To apply Basic auth to the whole API:
+security:
+  - basicAuth: []
+basePath: /location/v1
+parameters:
+  versionParam:
+    name: version
+    description: Version number of the API. Currently version number v1 is the only one supported.
+    in: path
+    type: string
+    required: true
+  companyId:
+    name: companyId
+    description: Company ID which is accessing API.
+    in: path
+    type: string
+    required: true
+  quadrant:
+    name: quadrant
+    in: query
+    type: string
+    description: |
+      Optional bounding box in format 'southWestPointCoordinates:northEastPointCoordinates'.
+      Example: '54.7340064,20.9514585:54.7340064,20.9514585'. Note that coordinates are separated by a colon.
+      The bounding box needs to result in a minimum of 3 different vertices in order for
+      a polygon to be used in a geo search. Coordinates which do not result in a proper polygon
+      will be completely ignored.
+  query:
+    name: query
+    in: query
+    type: string
+    description: |
+      Search term to be used to find areas or airports. Can be used for autocomplete forms.
+  countryCodes:
+    name: countryCodes
+    in: query
+    type: string
+    description: |
+      List of country codes in format ISO-3166-1 alpha-2 (2-letter ISO country codes). List is split by comma.
+      Example: 'US,CA'
+
+      This list is validated against the Distribution Channels Start-End-Location-Country-Codes
+      list configured in the DC settings. If a country code is valid, then it is allowed through.
+      In the end, if the attribute does not contain any valid country codes, then the backend
+      will fallback to using the Distribution Channels Start-End-Location-Country-Codes list.
+
+      For instance, if the configured list contains ("DE", "FR") and the client sends "DE", then
+      the search is constrained to only German locations. Howeverm, if the client sends say "PT",
+      then it will be ignored and the search will fallback to searching for both German and French
+      locations
+  pageSize:
+    name: 'page[size]'
+    in: query
+    type: integer
+    format: int32
+    description: |
+      The number of items to return per page.
+  pageNumber:
+    name: 'page[number]'
+    in: query
+    type: integer
+    format: int32
+    description: |
+      The number of the page to retrieve. Starts at 1.
+
+paths:
+  /{companyId}/areas:
+    parameters:
+      - $ref: '#/parameters/versionParam'
+      - $ref: '#/parameters/companyId'
+    get:
+      summary: Get areas
+      description: |
+        Finds lists of areas according to the specified filters.
+
+        Use this endpoint to search for areas that are used as part planning an itinerary.
+        For areas that the passengers are allowed to depart from, you should use the "origin-areas"
+        endpoint.
+
+        Parameters can be combined to allow more precise filtering. However, keep in mind that
+        when searching using a specific list of country codes, the country codes will be constrained
+        to what is configured on the distribution channel's "Start/End Location Search Country Constraints"
+        setting in Cockpit.
+
+        If no list of country codes is specified, then the configured list from the
+        distribution channel's "Start/End Location Search Country Constraints" is taken to
+        filter out valid airports.
+
+        You can also use this endpoint to fetch area recommendations for a given quadrant and search
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/quadrant'
+        - $ref: '#/parameters/query'
+        - $ref: '#/parameters/countryCodes'
+        - $ref: '#/parameters/pageSize'
+        - $ref: '#/parameters/pageNumber'
+      responses:
+        200:
+          description: |
+            Returns an AreasResponse object containing the list of found areas (according to the search parameters)
+            and possibly a meta object holding additional information and/or warnings
+          schema:
+            $ref: '#/definitions/AreasResponse'
+        400:
+          description: The request was invalid or an unexpected error happened
+          schema:
+            $ref: '#/definitions/ProblemResponse'
+
+  /{companyId}/origin-areas:
+    parameters:
+      - $ref: '#/parameters/versionParam'
+      - $ref: '#/parameters/companyId'
+      - $ref: '#/parameters/pageSize'
+    get:
+      summary: Search for origin (aka departure) areas
+      description: |
+        Searches for origin areas according to the specified filters. An origin areas is
+        the area from which passengers depart, essentially the starting point of their journey.
+        Sometimes, it’s also referred to as the departure area.
+
+        Areas searched on this endpoint are constrained to the list of country codes configured
+        in the distribution channel's "Transport: flight search departure airport country codes" 
+        setting in Cockpit.
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/query'
+      responses:
+        200:
+          description: |
+            Returns an AreasResponse object containing the list of found areas (according to the search parameters)
+            and possibly a meta object holding additional information and/or warnings
+          schema:
+            $ref: '#/definitions/AreasResponse'
+        400:
+          description: The request was invalid or an unexpected error happened
+          schema:
+            $ref: '#/definitions/ProblemResponse'
+
+  /{companyId}/airports:
+    parameters:
+      - $ref: '#/parameters/versionParam'
+      - $ref: '#/parameters/companyId'
+    get:
+      summary: Search for airports
+      description: |
+        Use this endpoint to search for airports that are used as part planning an itinerary.
+        For airports that the passengers are allowed to depart from, you should use the "origin-airports"
+        endpoint.
+
+        Parameters can be combined to allow more precise filtering. However, keep in mind that
+        when searching using a specific list of country codes, the country codes will be constrained
+        to what is configured on the distribution channel's "Start/End Location Search Country Constraints"
+        setting in Cockpit.
+
+        If no list of country codes is specified, then the configured list from the
+        distribution channel's "Start/End Location Search Country Constraints" is taken to
+        filter out valid airports.
+
+        Note that whenever the query matches exactly an airport IATA code, then the corresponding airport will be returned
+        as first element in the search results.
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/quadrant'
+        - $ref: '#/parameters/query'
+        - $ref: '#/parameters/countryCodes'
+        - $ref: '#/parameters/pageSize'
+        - $ref: '#/parameters/pageNumber'
+      responses:
+        200:
+          description: |
+            Returns a AirportsResponse object containing the list of found airports (according to the search parameters)
+            and possibly a meta object holding additional information and/or warnings
+          schema:
+            $ref: '#/definitions/AirportsResponse'
+        400:
+          description: The request was invalid or an unexpected error happened
+          schema:
+            $ref: '#/definitions/ProblemResponse'
+
+  /{companyId}/origin-airports:
+    parameters:
+      - $ref: '#/parameters/versionParam'
+      - $ref: '#/parameters/companyId'
+      - $ref: '#/parameters/pageSize'
+    get:
+      summary: Search for origin (aka departure) airports
+      description: |
+        Searches for origin airports according to the specified filters. An origin airport is
+        the airport from which passengers depart, essentially the starting point of their journey.
+        Sometimes, it’s also referred to as the departure airport.
+
+        Use this endpoint to search for airports that are used as the departure airport in an OUTBOUND
+        flight.
+
+        Airports searched on this endpoint are constrained to the list of country codes configured
+        in the distribution channel's "Transport: flight search departure airport country codes" 
+        setting in Cockpit.
+
+        Note that whenever the query matches exactly an airport IATA code, then the corresponding
+        airport will be returned as first element in the search results.
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/query'
+      responses:
+        200:
+          description: |
+            Returns a AirportsResponse object containing the list of found airports (according to the search parameters)
+            and possibly a meta object holding additional information and/or warnings
+          schema:
+            $ref: '#/definitions/AirportsResponse'
+        400:
+          description: The request was invalid or an unexpected error happened
+          schema:
+            $ref: '#/definitions/ProblemResponse'
+
+  /{companyId}/distance:
+    parameters:
+      - $ref: '#/parameters/versionParam'
+    post:
+      summary: Calculate distances and durations
+      description: |
+        Use this endpoint to calculate route distance and duration.
+
+        Calculates distance between locations. Depending on the mean of transportation, external services such as
+        Google Maps API is called. This can cause additional charges. Also, it is possible that distance
+        and/or duration can not be calculated and therefore, no value is returned.
+      parameters:
+        - name: data
+          description: Request body
+          in: body
+          schema:
+            $ref: '#/definitions/DistanceRequest'
+      responses:
+        200:
+          description: |
+            Returns information about distance and duration of each requested segment.
+          schema:
+            $ref: '#/definitions/DistanceResponse'
+
+  /airports/{iataCode}/pictures:
+    get:
+      summary: Returns pictures from the airport with the given iata code
+      description: |
+        Use this endpoint to get the pictures of an airport
+      parameters:
+        - name: iataCode
+          description: The IATA Code of an airport
+          in: path
+          type: string
+          required: true
+      produces:
+        - application/json
+      responses:
+        200:
+          description: |
+            Returns a PicturesResponse object containing a list of Pictures.
+          schema:
+            $ref: '#/definitions/PicturesResponse'
+        400:
+          description: The request was invalid or an unexpected error happened
+          schema:
+            $ref: '#/definitions/ProblemResponse'
+
+  /areas/{refId}/pictures:
+    get:
+      summary: Returns pictures from the area with the given refId
+      description: |
+        Use this endpoint to get the pictures of an area
+      parameters:
+        - name: refId
+          description: The refId of an area
+          in: path
+          type: string
+          required: true
+      produces:
+        - application/json
+      responses:
+        200:
+          description: |
+            Returns a PicturesResponse object containing a list of Pictures.
+          schema:
+            $ref: '#/definitions/PicturesResponse'
+        400:
+          description: The request was invalid or an unexpected error happened
+          schema:
+            $ref: '#/definitions/ProblemResponse'
+
+  /countries/calling-codes:
+    get:
+      summary: Returns a list of country iso codes and their primary calling code
+      description: Returns a list of country iso codes and their primary calling code
+      produces:
+        - application/json
+      responses:
+        200:
+          description: |
+            Returns a CountryCallingCodeResponse
+          schema:
+            $ref: '#/definitions/CountryCallingCodesResponse'
+
+definitions:
+  #################################################################################################
+  #
+  # R E S P O N S E S
+  #
+  #################################################################################################
+  CountryCallingCodesResponse:
+    type: object
+    required:
+      - callingCodes
+    properties:
+      callingCodes:
+        type: array
+        items:
+          $ref: '#/definitions/CountryCallingCode'
+      meta:
+        $ref: '#/definitions/Meta'
+
+  CountryCallingCode:
+    type: object
+    required:
+      - isoCode
+      - name
+      - callingCode
+    properties:
+      isoCode:
+        type: string
+        description: The ISO 639-1 country code (e.g. "PT" for Portugal)
+      name:
+        type: string
+        description: The name of the country localized in the current language (e.g. Portugal)
+      callingCode:
+        type: number
+        description: Telephone number prefixes for reaching telephone subscribers in the country (e.g. 351 for Portugal)
+
+  AreasResponse:
+    type: object
+    required:
+      - areas
+    properties:
+      areas:
+        type: array
+        items:
+          $ref: '#/definitions/Area'
+      meta:
+        $ref: '#/definitions/Meta'
+
+  AirportsResponse:
+    type: object
+    required:
+      - airports
+    properties:
+      airports:
+        type: array
+        items:
+          $ref: '#/definitions/Airport'
+      meta:
+        $ref: '#/definitions/Meta'
+
+  DistanceResponse:
+    type: object
+    required:
+      - segments
+    properties:
+      segments:
+        type: array
+        items:
+          $ref: '#/definitions/DistanceResponseSegment'
+      meta:
+        $ref: '#/definitions/Meta'
+
+  PicturesResponse:
+    type: object
+    description: An array of Picture objects
+    required:
+      - pictures
+    properties:
+      pictures:
+        type: array
+        items:
+          $ref: '#/definitions/Picture'
+
+  # All models below regarding problem responses and Meta are copy-pasted from plannerapi.
+  ProblemResponse:
+    type: object
+    description: An array of Problem objects
+    required:
+      - status
+      - problems
+    properties:
+      status:
+        type: integer
+        format: int32
+        description: The HTTP status code generated for this problem response
+        minimum: 100
+        maximum: 600
+        exclusiveMaximum: true
+      problems:
+        type: array
+        items:
+          $ref: '#/definitions/Problem'
+
+  Problem:
+    type: object
+    description: A Problem object inspired by https://tools.ietf.org/html/rfc7807 (Problem Details for HTTP APIs)
+    required:
+      - code
+      - detail
+      - level
+    properties:
+      code:
+        type: string
+        description: A specific code narrowing the type of Problem down
+        example: 'InputValidation'
+      detail:
+        type: string
+        description: A human readable explanation (localized to the language of the user) of this problem
+      level:
+        type: string
+        description: The severity of the problem
+        enum:
+          - ERROR
+          - WARNING
+      source:
+        $ref: '#/definitions/ProblemSource'
+
+  ProblemSource:
+    type: object
+    description: An object containing references to the source of the error
+    required:
+      - pointer
+    properties:
+      pointer:
+        type: string
+        description: A reference to the associated entity in the request document which caused the problem
+        example: '"/data" for a primary data object or "/title" for a specific attribute'
+
+  Meta:
+    type: object
+    required:
+      - notifications
+    properties:
+      notifications:
+        type: array
+        items:
+          $ref: '#/definitions/Notification'
+      page:
+        $ref: '#/definitions/Page'
+
+  Page:
+    type: object
+    required:
+      - number
+      - size
+    properties:
+      number:
+        type: integer
+        format: int32
+        description: Current page number
+      size:
+        type: integer
+        format: int32
+        description: Amount of items per page
+      hasMore:
+        type: boolean
+        description: Answers if there are more pages
+
+  Notification:
+    type: object
+    required:
+      - notificationType
+      - message
+    properties:
+      notificationType:
+        type: string
+        enum:
+          - GeneralInfo
+          - GeneralError
+          - ServiceUnavailable
+          - NotAuthorized
+      message:
+        type: string
+        description: Field containing the general warning / information to display to the user
+      code:
+        type: string
+        description: A specific code identifying the notification
+        example: 'Deprecated'
+
+  #################################################################################################
+  #
+  # R E Q U E S T S
+  #
+  #################################################################################################
+  DistanceRequest:
+    type: array
+    items:
+      $ref: '#/definitions/DistanceRequestSegment'
+
+  #################################################################################################
+  #
+  # V I E W S
+  #
+  #################################################################################################
+  IataCode: &IataCode
+    type: string
+    description: The unique 3-letter IATA code that is assigned to each airport
+    example: 'JFK'
+
+  Timezone: &Timezone # see https://en.wikipedia.org/wiki/Tz_database
+    type: string
+    description: The local time zone in the TZ database format (e.g. Area/Location).
+    example: 'Europe/Zurich'
+
+  CountryCode: &CountryCode
+    type: string
+    format: iso-3661-1
+    description: an ISO 3166-1 alpha-2 country code
+    example: 'CH'
+
+  AirportType:
+    # investigation task: https://app.asana.com/0/4180278855540/1156790512514321
+    # inspiration from
+    # - https://en.wikipedia.org/wiki/Category:Airports_by_type
+    # - https://www.ukessays.com/essays/tourism/types-uk-airport-6528.php
+    type: string
+    enum: &AirportType
+      - International
+      - Unknown
+  #      - Local
+  #      - Private
+  #      - Military
+  #      - Heliport
+  #      - Cargo
+
+  TransportMode:
+    type: string
+    enum: &TransportMode
+      - Flight
+      - Boat
+      - Road
+      - Rail
+      - Walk
+      - Bicycle
+
+  LocationType:
+    type: string
+    enum: &LocationType
+      - Airport
+      - Area
+
+  AreaSupplier: &AreaSupplier
+    type: string
+    description: |
+      For areas or area descriptions which are managed by the tour operator, the supplier value is the tour
+      operator's refId. For Nezaza-owned areas and area descrptions, the supplier value is "Nezasa"
+    example: 'Nezasa'
+
+  Area:
+    type: object
+    description: |
+      A view over the Area model which describes a set of coordinates contained within administrative borders.
+    required:
+      - id
+      - airports
+      - coordinates
+      - countryCode
+      - name
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+        description: Localized area name
+      coordinates:
+        $ref: '#/definitions/Coordinates'
+      airports:
+        type: array
+        description: A sequence of nearby airports defined by their three-letter codes.
+        items: *IataCode
+      metropolitanArea:
+        type: string
+        description: The IATA defined metropolitan area code if there's any
+      countryCode: *CountryCode
+      countryName:
+        type: string
+        description: |
+          If known it is the localized name of the country
+      rating:
+        type: number
+        format: double
+        description: |
+          The Area has a rating associated which shall be used as a weighting system to show the users of the system
+          the touristically more relevant/important areas. The value range for the rating is `[0 - 5]`.
+      state:
+        type: string
+        description: |
+          If known, the state where the area is located in.
+      city:
+        type: string
+        description: |
+          If known, the city where the area is located at.
+      timezone: *Timezone
+      supplier: *AreaSupplier
+
+  Airport:
+    type: object
+    required:
+      - id
+      - city
+      - coordinates
+      - countryCode
+      - iataCode
+      - name
+      - locationType
+    properties:
+      id:
+        type: string
+      iataCode: *IataCode
+      icaoCode:
+        type: string
+        description: 4 letter code simmilar to the IATA code, used to identify airports and structures alike
+      name:
+        type: string
+        description: Official name of the airport
+      airportType:
+        type: string
+        enum: *AirportType
+        description: |
+          Distinguish airport types. International are generally important airports for the tourism industry.
+          Used to filter out small local airports which would have value `Unknown`.
+      city:
+        type: string
+        description: The city where the airport belongs
+      countryCode: *CountryCode
+      metropolitanArea:
+        type: string
+        description: The IATA defined metropolitan area code where the airport belongs
+      timezone: *Timezone
+      coordinates:
+        $ref: '#/definitions/Coordinates'
+      locationType:
+        type: string
+
+  DistanceRequestSegment:
+    type: object
+    required:
+      - from
+      - to
+      - transportMode
+    properties:
+      from:
+        $ref: '#/definitions/GeoPoint'
+      to:
+        $ref: '#/definitions/GeoPoint'
+      transportMode:
+        type: string
+        enum: *TransportMode
+
+  DistanceResponseSegment:
+    type: object
+    required:
+      - from
+      - to
+      - transportMode
+    properties:
+      from:
+        $ref: '#/definitions/GeoPoint'
+      to:
+        $ref: '#/definitions/GeoPoint'
+      transportMode:
+        type: string
+        enum: *TransportMode
+      duration:
+        type: integer
+        format: int32
+        description: Duration in seconds. Might be empty if it couldn't be calculated or retrieved.
+      distance:
+        type: integer
+        format: int32
+        description: Distance in meters. Might be empty if it couldn't be calculated or retrieved.
+
+  GeoPoint:
+    type: object
+    description: Either `coordinates` or `location` should be provided
+    properties:
+      coordinates:
+        $ref: '#/definitions/Coordinates'
+      location:
+        $ref: '#/definitions/Location'
+
+  Location:
+    type: object
+    description: Reference to a location from our inventory
+    required:
+      - locationId
+      - locationType
+    properties:
+      locationId:
+        type: string
+      locationType:
+        type: string
+        enum: *LocationType
+
+  Coordinates:
+    type: object
+    required:
+      - lat
+      - lon
+    properties:
+      lat:
+        type: number
+        format: double
+      lon:
+        type: number
+        format: double
+
+  Picture:
+    type: object
+    description: Defines a view of our Picture model along with its descriptions
+    properties:
+      refId:
+        type: string
+      caption:
+        type: string
+      image:
+        $ref: '#/definitions/PictureItem'
+      thumbnail:
+        $ref: '#/definitions/PictureItem'
+      original:
+        $ref: '#/definitions/PictureItem'
+      uncropped:
+        $ref: '#/definitions/PictureItem'
+
+  PictureItem:
+    type: object
+    required:
+      - name
+      - url
+      - width
+      - height
+    properties:
+      name:
+        type: string
+      url:
+        type: string
+      width:
+        type: integer
+        format: int32
+      height:
+        type: integer
+        format: int32
+      sizeInKb:
+        type: integer
+        format: int64
+    example:
+      height: 599
+      name: 'fw_wi4wwv6ybf3k.jpg'
+      sizeInKb: 134
+      url: 'https://s3-eu-west-1.amazonaws.com/nezasa-dev/pictures/fw_wi4wwv6ybf3k.jpg'
+      width: 800
