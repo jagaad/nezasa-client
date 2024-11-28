@@ -26,3 +26,11 @@ export enum WebhookEventType {
 	REFUND_DELETED = 'refund_deleted',
 	PING = 'ping',
 }
+
+declare module './checkout-api-v1' {
+	interface PackagePayableInfo {
+		// TODO: Docs don't provide this field
+		// But some that are provided do not exist at runtime
+		totalPackagePrice: MonetaryValue;
+	}
+}
