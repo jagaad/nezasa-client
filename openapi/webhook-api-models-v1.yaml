@@ -1,0 +1,213 @@
+swagger: '2.0'
+info:
+  version: '1.0'
+  title: Webhook API Models and Responses
+  description: |
+    This is the definition of the Nezasa Webhook API used to notify 3rd party systems.
+  contact:
+    email: support@nezasa.com
+    url: 'https://www.nezasa.com'
+
+definitions:
+  #################################################################################################
+  #
+  # R E Q U E S T S
+  #
+  #################################################################################################
+
+  WebhookCreateRequest:
+    type: object
+    description: To create a new webhook
+    required:
+      - events
+      - target
+    properties:
+      name:
+        type: string
+        description: An optional name that the client can use to identify the webhook with a human-readable name
+      active:
+        type: boolean
+        default: true
+        description: |
+          Determines if notifications are sent when the webhook is triggered. Set to true to send notifications.
+      events:
+        type: array
+        items:
+          type: string
+          enum:
+            - booking_completed
+            - booking_requested
+            - cancellation_completed
+            - booking_change_initiated
+            - booking_change_completed
+            - booking_change_requested
+            - booking_modified
+            - payment_added
+            - payment_closed
+            - payment_deleted
+            - refund_added
+            - refund_closed
+            - refund_deleted
+            - pax_changed
+            - ping
+        description: Determines what events the hook is triggered for. The existing event array is overwritten with the values contained in this request.
+      target:
+        $ref: '#/definitions/WebhookTarget'
+
+  WebhookUpdateRequest:
+    type: object
+    description: |
+      To update an existing webhook. Only attributes that are defined in the request are updated. Other attributes remain unchanged.
+      The target can only be modified as an atomic unit, i.e. either all attributes of the target including the secret have to be specified or no target at all.
+    properties:
+      name:
+        type: string
+        description: An optional name that the client can use to identify the webhook with a human-readable name
+      active:
+        type: boolean
+        default: true
+        description: |
+          Determines if notifications are sent when the webhook is triggered. Set to true to send notifications.
+      events:
+        type: array
+        items:
+          type: string
+          enum:
+            - booking_completed
+            - booking_requested
+            - cancellation_completed
+            - booking_change_initiated
+            - booking_change_completed
+            - booking_change_requested
+            - booking_modified
+            - payment_added
+            - payment_closed
+            - payment_deleted
+            - refund_added
+            - refund_closed
+            - refund_deleted
+            - pax_changed
+            - ping
+        description: Determines what events the hook is triggered for. The existing event array is overwritten with the values contained in this request.
+      target:
+        $ref: '#/definitions/WebhookTarget'
+
+  #################################################################################################
+  #
+  # R E S P O N S E S
+  #
+  #################################################################################################
+
+  WebhookListResponse:
+    type: array
+    items:
+      $ref: '#/definitions/WebhookResponse'
+
+  WebhookResponse:
+    type: object
+    description: A registered webhook
+    required:
+      - id
+      - events
+      - target
+      - created
+      - modified
+    properties:
+      id:
+        type: string
+        description: The id of the webhook
+      name:
+        type: string
+        description: An optional name that the client can use to identify the webhook with a human-readable name
+      active:
+        type: boolean
+        default: true
+        description: |
+          Determines if notifications are sent when the webhook is triggered. Set to true to send notifications.
+      events:
+        type: array
+        items:
+          type: string
+        description: Determines what events the hook is triggered for.
+      target:
+        $ref: '#/definitions/WebhookTarget'
+      created:
+        type: string
+        description: |
+          The timestamp when the webhook was created. A "date-time" as defined by https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#anchor14
+      modified:
+        type: string
+        description: |
+          The timestamp when the webhook was modified the last time. A "date-time" as defined by https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#anchor14
+
+  WebhookTarget:
+    type: object
+    description: Describes a target of a webhook call.
+    required:
+      - url
+      - content_type
+      - secret
+    properties:
+      url:
+        type: string
+        description: The URL which will be called and to which the payloads will be delivered. Only https URLs are supported.
+      secret:
+        type: string
+        description: |
+          If provided, the secret will be used as the key to generate the HMAC hex digest value in the `X-Nezasa-Signature` header.
+          The 256-bit secret must be specified as 16 hexadecimal digits without any special prefix like 0x.
+        example: '1234567890abcdef'
+
+  ProblemResponse:
+    type: object
+    description: An array of Problem objects
+    required:
+      - status
+      - problems
+    properties:
+      status:
+        type: integer
+        format: int32
+        description: The HTTP status code generated for this problem response
+        minimum: 100
+        maximum: 600
+        exclusiveMaximum: true
+      problems:
+        type: array
+        items:
+          $ref: '#/definitions/Problem'
+
+  Problem:
+    type: object
+    description: A Problem object inspired by https://tools.ietf.org/html/rfc7807 (Problem Details for HTTP APIs)
+    required:
+      - code
+      - detail
+      - level
+    properties:
+      code:
+        type: string
+        description: A specific code narrowing the type of Problem down
+        example: 'InputValidation'
+      detail:
+        type: string
+        description: A human readable explanation (localized to the language of the user) of this problem
+      level:
+        type: string
+        description: The severity of the problem
+        enum:
+          - ERROR
+          - WARNING
+      source:
+        $ref: '#/definitions/ProblemSource'
+
+  ProblemSource:
+    type: object
+    description: An object containing references to the source of the error
+    required:
+      - pointer
+    properties:
+      pointer:
+        type: string
+        description: A reference to the associated entity in the request document which caused the problem
+        example: '"/data" for a primary data object or "/title" for a specific attribute'
