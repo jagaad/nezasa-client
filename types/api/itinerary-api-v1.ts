@@ -16,6 +16,8 @@ export interface FromPullPnrRequest {
 	/** Aer agency number */
 	aerAgencyNumber?: string;
 	allocatedPax?: PaxAllocationInitParams;
+	/** The travel agency which created an itinerary. */
+	agencyRefId?: AgencyRefId;
 }
 
 export interface FromTemplateRequest {
@@ -202,6 +204,13 @@ export interface FromScratchRequest {
 	 * - the external customer id does not leak any PII (Personally Identifiable Information) and is thus GDPR compliant
 	 */
 	externalCustomerId?: ExternalCustomerId;
+	/** The creation channel. It is derived automatically in most cases, but may also be set by the caller, e.g., in case of PlannerCopilot. */
+	creationChannel?: ItineraryCreationChannel;
+	/**
+	 * The ID of the Planner Copilot conversation that lead to the creation of itinerary call. The ID
+	 * might be used for data correlation purposes between the Copilot and the Core TripBuilder services.
+	 */
+	plannerCopilotConversationId?: PlannerCopilotConversationId;
 }
 
 export interface ItineraryResponse {
@@ -312,6 +321,17 @@ export interface Notification {
  */
 export type Currency = string;
 
+/** The creation channel. It is derived automatically in most cases, but may also be set by the caller, e.g., in case of PlannerCopilot. */
+export enum ItineraryCreationChannel {
+	FromPlannerCopilot = 'FromPlannerCopilot',
+}
+
+/**
+ * The ID of the Planner Copilot conversation that lead to the creation of itinerary call. The ID
+ * might be used for data correlation purposes between the Copilot and the Core TripBuilder services.
+ */
+export type PlannerCopilotConversationId = string;
+
 export interface MonetaryValue {
 	/**
 	 * Monetary amount
@@ -330,9 +350,15 @@ export interface FromPullPnrRequestSegment {
 	reservationSystem?: string;
 	/** Pax Last Name identifier */
 	lastName?: string;
-	/** Supplier name */
+	/**
+	 * An optional supplier name. If both the `supplier` and `supplierRefId` are
+	 * provided, the `supplierRefId` takes precedence
+	 */
 	supplier?: string;
-	/** Supplier reference ID */
+	/**
+	 * An optional supplier reference ID. If both the `supplier` and `supplierRefId` are
+	 * provided, the `supplierRefId` takes precedence
+	 */
 	supplierRefId?: string;
 	/** Net price for the segment */
 	netPrice?: MonetaryValue;
@@ -593,6 +619,11 @@ export interface Address {
 
 export interface LegSkeleton {
 	/**
+	 * A connection skeleton defines the defaults of a connection when creating an itinerary. Currently,
+	 * it only supports to set the default mean of transport for the connection when the itinerary is created.
+	 */
+	incomingConnection?: ConnectionSkeleton;
+	/**
 	 * A stop skeleton defines the defaults of a stop when creating an itinerary: the location, the nights, and
 	 * the default services (currently accommodations is supported).
 	 */
@@ -852,6 +883,30 @@ export interface StopSkeleton {
 	activities?: ActivityReference[];
 	/** An optional description for the stop. */
 	description?: string;
+}
+
+/**
+ * A connection skeleton defines the defaults of a connection when creating an itinerary. Currently,
+ * it only supports to set the default mean of transport for the connection when the itinerary is created.
+ */
+export interface ConnectionSkeleton {
+	transportMeans?: TransportMeans;
+}
+
+export enum TransportMeans {
+	Bus = 'Bus',
+	Shuttle = 'Shuttle',
+	Flight = 'Flight',
+	Boat = 'Boat',
+	Train = 'Train',
+	Activity = 'Activity',
+	CarActivity = 'CarActivity',
+	RentalCar = 'RentalCar',
+	OwnCar = 'OwnCar',
+	CarFerry = 'CarFerry',
+	Motorcycle = 'Motorcycle',
+	Bicycle = 'Bicycle',
+	Walk = 'Walk',
 }
 
 export enum BookingStatus {

@@ -37,10 +37,12 @@ definitions:
           enum:
             - booking_completed
             - booking_requested
+            - booking_failed
             - cancellation_completed
             - booking_change_initiated
             - booking_change_completed
             - booking_change_requested
+            - booking_change_booking_failed
             - booking_modified
             - payment_added
             - payment_closed
@@ -75,10 +77,12 @@ definitions:
           enum:
             - booking_completed
             - booking_requested
+            - booking_failed
             - cancellation_completed
             - booking_change_initiated
             - booking_change_completed
             - booking_change_requested
+            - booking_change_booking_failed
             - booking_modified
             - payment_added
             - payment_closed
@@ -145,7 +149,6 @@ definitions:
     description: Describes a target of a webhook call.
     required:
       - url
-      - content_type
       - secret
     properties:
       url:

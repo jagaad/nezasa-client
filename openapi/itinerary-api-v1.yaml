@@ -12,7 +12,7 @@ info:
 
     ## Doc Version
 
-    Last Updated: 2024-09-30
+    Last Updated: 2024-12-02
 
     ## Compression
 
@@ -104,6 +104,10 @@ info:
     | 1.0         | 29.05.2024   | The from-scratch endpoint was extended to support stop activities |
     | 1.0         | 12.06.2024   | The from-scratch endpoint was extended to support the definition of an itinerary title |
     | 1.0         | 30.09.2024   | Added documentation for from-pnr endpoint |
+    | 1.0         | 28.10.2024   | Improved documentation for supplier and supplierRefId when creating an itinerary from PNR |
+    | 1.0         | 05.11.2024   | Added `agencyRefId` to the `FromPullPnrRequest` schema, it is now possible to enter the travel agency id which creates an itinerary |
+    | 1.0         | 29.11.2024   | The from-scratch endpoint now supports passing the transport means for the incoming connection of a leg/stop skeleton |
+    | 1.0         | 02.12.2024   | Fixed up allocated pax in example for pull-pnr |
 
     # Authentication
 
@@ -456,9 +460,14 @@ paths:
         ],
           "aerAgencyNumber": "AGENCY123",
           "allocatedPax": {
-            "adults": 2,
-            "children": 1
-          }
+            "rooms": [
+              {
+                "adults": 2,
+                "childAges": [3,8]
+              }
+            ]
+          },
+          "agencyRefId": "NICETOURSTEST"
         }
 
         ```
@@ -598,6 +607,8 @@ components:
           description: Aer agency number
         allocatedPax:
           $ref: '#/components/schemas/PaxAllocationInitParams'
+        agencyRefId:
+          $ref: '#/components/schemas/AgencyRefId'
     FromTemplateRequest:
       required:
         - startDate
@@ -703,7 +714,10 @@ components:
           $ref: '#/components/schemas/Currency'
         externalCustomerId:
           $ref: '#/components/schemas/ExternalCustomerId'
-
+        creationChannel:
+          $ref: '#/components/schemas/ItineraryCreationChannel'
+        plannerCopilotConversationId:
+          $ref: '#/components/schemas/PlannerCopilotConversationId'
     ItineraryResponse:
       type: object
       properties:
@@ -847,6 +861,16 @@ components:
       type: string
       description: 'The ISO-4217 currency code (e.g. EUR, USD, etc)'
       format: iso-4217
+    ItineraryCreationChannel:
+      type: string
+      description: 'The creation channel. It is derived automatically in most cases, but may also be set by the caller, e.g., in case of PlannerCopilot.'
+      enum:
+        - FromPlannerCopilot
+    PlannerCopilotConversationId:
+      type: string
+      description: |
+        The ID of the Planner Copilot conversation that lead to the creation of itinerary call. The ID
+        might be used for data correlation purposes between the Copilot and the Core TripBuilder services.
     MonetaryValue:
       type: object
       required:
@@ -876,10 +900,14 @@ components:
           description: Pax Last Name identifier
         supplier:
           type: string
-          description: Supplier name
+          description: |
+            An optional supplier name. If both the `supplier` and `supplierRefId` are
+            provided, the `supplierRefId` takes precedence
         supplierRefId:
           type: string
-          description: Supplier reference ID
+          description: |
+            An optional supplier reference ID. If both the `supplier` and `supplierRefId` are
+            provided, the `supplierRefId` takes precedence
         netPrice:
           $ref: '#/components/schemas/MonetaryValue'
           description: Net price for the segment
@@ -1213,6 +1241,8 @@ components:
     LegSkeleton:
       type: object
       properties:
+        incomingConnection:
+          $ref: '#/components/schemas/ConnectionSkeleton'
         stop:
           $ref: '#/components/schemas/StopSkeleton'
     ActivityReference:
@@ -1475,6 +1505,30 @@ components:
       description: |
         A stop skeleton defines the defaults of a stop when creating an itinerary: the location, the nights, and
         the default services (currently accommodations is supported).
+    ConnectionSkeleton:
+      type: object
+      description: |
+        A connection skeleton defines the defaults of a connection when creating an itinerary. Currently, 
+        it only supports to set the default mean of transport for the connection when the itinerary is created.
+      properties:
+        transportMeans:
+          $ref: '#/components/schemas/TransportMeans'
+    TransportMeans:
+      type: string
+      enum: &TransportMeans
+        - Bus
+        - Shuttle
+        - Flight
+        - Boat
+        - Train
+        - Activity
+        - CarActivity
+        - RentalCar
+        - OwnCar
+        - CarFerry
+        - Motorcycle
+        - Bicycle
+        - Walk
     BookingStatus:
       type: string
       enum: &BookingStatus

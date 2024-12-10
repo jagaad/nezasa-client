@@ -1,0 +1,290 @@
+openapi: 3.0.3
+info:
+  title: Inventory Picture API
+  version: '1.0'
+  description: |
+    The Inventory Picture API allows to upload and access pictures in the picture library.
+    In the first iteration we only support import of picture (Create). Other CRUD operations
+    are not supported yet, but will be added in future extensions.
+
+    The API is used to upload picture by picture. The upload endpoint allows to submit 3 different
+    picture files. This can be used to upload different picture renditions with different sizes (such
+    as the original picture, regular web resolution and a thumbnail resolution).
+
+    # Picture Aspect Ratio
+    The TripBuilder frontends are optimized for pictures with an aspect ratio of 4:3 using
+    landscape orientation.
+
+    # Limitations
+    The maximum upload size is 10 MB.
+  contact:
+    email: support@nezasa.com
+    url: https://www.nezasa.com
+servers:
+  - url: /inventory/api/{companyId}
+    variables:
+      companyId:
+        default: Nezasa
+paths:
+  /picture/upload:
+    post:
+      description: Imports a new picture into the picture library.
+      operationId: postPictureUpload
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PictureUploadRequest'
+        required: true
+      responses:
+        '200':
+          description: Returns the created picture representation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PictureResponse'
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+  /picture/{pictureId}:
+    get:
+      description: Gets the picture representation from the picture library.
+      operationId: getPicturePictureid
+      parameters:
+        - name: pictureId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Returns the picture representation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PictureResponse'
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+components:
+  schemas:
+    Dimension:
+      type: string
+      description: the type of the picture dimensions
+      enum:
+        - Original
+        - FullWeb
+        - ThumbnailWeb
+    Level:
+      type: string
+      description: The severity of the problem
+      enum:
+        - ERROR
+        - WARNING
+        - INFO
+    LicenseInfo:
+      required:
+        - licenseHolderRefId
+        - restrictedUse
+      type: object
+      properties:
+        licenseHolderRefId:
+          type: string
+          description: The reference ID of the company that licensed the picture
+        restrictedUse:
+          type: boolean
+          description:
+            If true only the license holder is allowed to use the picture
+            on their website, if false all marketplace participants can use the picture
+            on their website.
+        attributionAuthor:
+          type: string
+          description:
+            The author of the picture if has to be provided. If none is
+            defined we assume that we are not obliged to show any attribution notice.
+            Can be a Markdown formatted string with a link to the author's website.
+        attributionLicense:
+          type: string
+          description:
+            The license of the picture if has to be provided. If none is
+            defined we assume that we are not obliged to show any attribution notice.
+            Can be a Markdown formatted string with a link to the license.
+      description: Information about the license of a picture
+    PictureItem:
+      required:
+        - name
+        - width
+        - height
+        - dimension
+      type: object
+      properties:
+        name:
+          type: string
+          description: the name of the picture
+        width:
+          type: integer
+          description: the width of the picture in pixels
+          format: int32
+        height:
+          type: integer
+          description: the height of the picture in pixels
+          format: int32
+        sizeInKb:
+          type: number
+          description: the size of the picture in kilobytes
+          format: double
+        dimension:
+          $ref: '#/components/schemas/Dimension'
+      description: Information about a picture
+    PictureMetaData:
+      required:
+        - folderPath
+      type: object
+      properties:
+        folderPath:
+          type: string
+          description:
+            'The folder path in which the picture shall be stored. If the
+            folder does not exist yet, it is automatically created. The folder path
+            is delimited by a forward slash /.  Example: `/` denotes the root folder;
+            `/modules/costarica/` creates a folder `modules` with a subfolder `costarica`'
+        caption:
+          type: object
+          description: Localized picture caption
+          additionalProperties:
+            type: string
+        keywords:
+          type: object
+          description: Localized keywords
+          additionalProperties:
+            type: string
+        licenseInfo:
+          $ref: '#/components/schemas/LicenseInfo'
+      description: The meta data information of the picture
+    PictureResponse:
+      required:
+        - id
+        - metadata
+      type: object
+      properties:
+        id:
+          type: string
+          description: The object ID of a picture
+        metadata:
+          $ref: '#/components/schemas/PictureMetaData'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PictureItem'
+          description:
+            The picture items. Each item corresponds to a picture file
+            with a different size.
+      description: Represents information of a picture created in the picture library
+    PictureUploadRequest:
+      required:
+        - originalFile
+      type: object
+      properties:
+        originalFile:
+          type: string
+          description:
+            The original file in the maximum resolution. The size should
+            be at least 1600x1200 pixels
+          format: binary
+        webOptimizedFile:
+          type: string
+          description:
+            The file optimized for display in web applications.The file
+            size should be at least 800 x 600 pixels
+          format: binary
+        thumbnailFile:
+          type: string
+          description:
+            The file in the size as it can be used for thumbnails. The
+            recommended size for thumbnail use on TripBuilder is 460 x 345 pixels
+          format: binary
+        metadata:
+          $ref: '#/components/schemas/PictureMetaData'
+    Problem:
+      required:
+        - code
+        - detail
+        - level
+      type: object
+      properties:
+        code:
+          type: string
+          description: A specific code narrowing the type of Problem down
+        detail:
+          type: string
+          description:
+            A human readable explanation (localized to the language of
+            the user) of this problem
+        level:
+          $ref: '#/components/schemas/Level'
+        source:
+          $ref: '#/components/schemas/ProblemSource'
+      description:
+        A Problem object inspired by https://tools.ietf.org/html/rfc7807
+        (Problem Details for HTTP APIs)
+    ProblemResponse:
+      required:
+        - status
+      type: object
+      properties:
+        status:
+          type: integer
+          description: The HTTP status code generated for this problem response
+          format: int32
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/Problem'
+      description: An array of Problem objects
+    ProblemSource:
+      required:
+        - pointer
+      type: object
+      properties:
+        pointer:
+          type: string
+          description:
+            A reference to the associated entity in the request document
+            which caused the problem
+      description: An object containing references to the source of the error
+  securitySchemes:
+    httpAuth:
+      type: http
+      scheme: basic
+security:
+  - httpAuth: []

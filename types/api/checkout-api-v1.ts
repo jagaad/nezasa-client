@@ -9,7 +9,7 @@
  * ---------------------------------------------------------------
  */
 
-/** Defines a geographic point such as an airport or area */
+/** Represents a geographic location with coordinates and country information. Used for airports, cities, and other points of interest. */
 export interface GeoLocation {
 	name: string;
 	coordinates: Coordinates;
@@ -34,6 +34,15 @@ export interface MonetaryValue {
 	currency: string;
 }
 
+/**
+ * Represents the current status of a booking:
+ * - Open: Available for booking
+ * - OnRequest: Available but requires manual confirmation
+ * - Booked: Successfully booked
+ * - NonBookable: Not available for booking
+ * - Cancelled: Was booked but has been cancelled
+ * - None: Status unknown or not applicable
+ */
 export enum BookingStatus {
 	Open = 'Open',
 	OnRequest = 'OnRequest',
@@ -53,23 +62,25 @@ export interface Address {
 	region?: string | null;
 }
 
+/** Contains personal contact information including name, address, and communication details. Used for both travelers and billing contacts. */
 export interface ContactInfo {
 	firstName?: string;
 	lastName?: string;
 	companyName?: string;
-	gender?: 'male' | 'female' | 'other';
+	gender?: 'Male' | 'Female';
 	address?: Address;
 	email?: string;
 	mobilePhone?: string;
 	taxNumber?: string | null;
 }
 
+/** Detailed passenger information including personal details, travel documents, and contact information. Each passenger must have a unique refId. */
 export interface PaxInfo {
 	/** A unique ID for the passenger in the format ('pax-<number>') and it should be sequential. */
 	refId?: string;
 	firstName?: string;
 	lastName?: string;
-	gender?: 'male' | 'female' | 'other';
+	gender?: 'Male' | 'Female';
 	age?: number;
 	/**
 	 * A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
@@ -117,6 +128,10 @@ export interface UpsellItemOfferSelection {
 	quantity?: number;
 }
 
+/**
+ * Represents an additional service or product that can be added to the booking.
+ * Includes pricing information, supplier details, and booking status.
+ */
 export interface UpsellItem {
 	/** The component unique identifier */
 	componentRefId: string;
@@ -128,6 +143,15 @@ export interface UpsellItem {
 	salesPrice: MonetaryValue;
 	/** The supplier of the upsell item */
 	supplier?: string;
+	/**
+	 * Represents the current status of a booking:
+	 * - Open: Available for booking
+	 * - OnRequest: Available but requires manual confirmation
+	 * - Booked: Successfully booked
+	 * - NonBookable: Not available for booking
+	 * - Cancelled: Was booked but has been cancelled
+	 * - None: Status unknown or not applicable
+	 */
 	status: BookingStatus;
 	/** The supplier confirmation number if component status is booked. */
 	supplierConfirmationNumber?: string;
@@ -142,6 +166,8 @@ export interface Itinerary {
 	/** The ID of the itinerary */
 	id: string;
 	title: string;
+	/** The external customer ID, in any. */
+	externalCustomerId?: string;
 	lastModified: string;
 	/**
 	 * If present it is the ID of the itinerary-template from which this itinerary was generated. Not
@@ -166,40 +192,20 @@ export interface Itinerary {
 export interface Module {
 	/** A unique ID (only within the owning Itinerary) which identifies this module */
 	id: string;
-	/** Defines a geographic point such as an airport or area */
+	/** Represents a geographic location with coordinates and country information. Used for airports, cities, and other points of interest. */
 	startLocation: GeoLocation;
-	/** Defines a geographic point such as an airport or area */
+	/** Represents a geographic location with coordinates and country information. Used for airports, cities, and other points of interest. */
 	endLocation: GeoLocation;
 	legs?: Leg[];
 }
 
 /**
- * A Leg is a container object which houses a series of feeder connections and a stop. The purpose
- * of the feeder connections is to bring the PAX from either the start location (if this happens to
- * be the first leg) or from a previous leg to the stop.
+ * Represents a segment of the journey between two locations. A leg consists of:
+ * 1. A series of connections (transport between locations)
+ * 2. A stop (stay at a location)
+ * 3. Optional activities at the stop location
  *
- * ```
- * +-------------------------+
- * | +-----------------+     |
- * | |      C1         |  +  |
- * | +----+------------+  |  |
- * |      |               |  |
- * | +----+------------+  |  |
- * | |      C2         |  | Connections
- * | +----+------------+  |  |
- * |      |               |  |
- * | +----+------------+  |  |
- * | |      Cn         |  +  |
- * | +----+------------+     |
- * |      |                  |
- * | +----+------------+     |
- * | |                 |     |
- * | |  Stop           |     |
- * | | (Area, Nights)  |     |
- * | |                 |     |
- * | +-----------------+     |
- * +-------------------------+
- * ```
+ * The leg connects the previous stop to the current one through various transportation options.
  */
 export interface Leg {
 	id: string;
@@ -209,15 +215,21 @@ export interface Leg {
 	 */
 	startDate: string;
 	/**
-	 * Describes the period in which a traveler stays in one area. This also includes the hotels (accommodations)
-	 * for the entire duration of the stop.
+	 * Represents a stay at a specific location during the journey. Includes:
+	 * - Location details (city, area, or point of interest)
+	 * - Duration of stay (number of nights)
+	 * - Accommodation details
+	 * - Flexible duration options (minimum and maximum nights)
 	 */
 	stop: Stop;
 }
 
 /**
- * Describes the period in which a traveler stays in one area. This also includes the hotels (accommodations)
- * for the entire duration of the stop.
+ * Represents a stay at a specific location during the journey. Includes:
+ * - Location details (city, area, or point of interest)
+ * - Duration of stay (number of nights)
+ * - Accommodation details
+ * - Flexible duration options (minimum and maximum nights)
  */
 export interface Stop {
 	/** A specialized type of location which serves as the location for a Stop */
@@ -320,6 +332,10 @@ export interface TextSection {
 }
 
 export interface PaymentTransaction {
+	/** The transaction ID */
+	transactionId: string;
+	/** The external reference ID */
+	externalRefId?: string;
 	amount: MonetaryValue;
 	status:
 		| 'Open'
@@ -338,6 +354,8 @@ export interface PaymentTransaction {
 		| 'Future'
 		| 'Unknown'
 		| 'Other';
+	/** Defined if the payment method name is of type "Other" */
+	paymentMethodName?: string;
 	/**
 	 * A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
 	 * @example "2017-12-31"
@@ -350,6 +368,8 @@ export interface CheckoutDetails {
 	refId: string;
 	/** The checkout Status */
 	checkoutState: string;
+	/** The external booking ID, if any */
+	externalBookingId?: string;
 	termsAndConditions: TermsAndConditions;
 	/**
 	 * This view object is a representation of our Itinerary model. It provides callers with
@@ -358,6 +378,18 @@ export interface CheckoutDetails {
 	itinerary: Itinerary;
 	/** Traveler details */
 	travelerDetails: TravelerDetails;
+	/**
+	 * Represents the pricing info for the current checkout:
+	 * - packagePrice - the original total price of the package before any discounts are applied.
+	 * - previousPackagePrice - the previous price of the package before any discounts are applied, only set during booking changes.
+	 * - totalPackagePrice - the original price of the package before any discounts are applied and including any externally paid charges.
+	 * - discountedPackagePrice - the total sales price of the package after applying any discounts.
+	 * - downPayment - the configured down payment amount required to secure the booking.
+	 * - openAmount - the remaining balance that needs to be paid after accounting for any down payments.
+	 * - externallyPaidCharges - charges that must be paid externally, such as at the destination.
+	 * - promoCode - the details of the applied promo code.
+	 * - promoCodeDiscount - the discount amount due to the applied promo code.
+	 */
 	prices: PackagePayableInfo;
 	insurances: InsuranceAdHocComponentResponse[];
 	paymentTransactions: PaymentTransaction[];
@@ -383,6 +415,15 @@ export interface InsuranceAdHocComponentUpsertRequest {
 	description?: string;
 	netPrice: MonetaryValue;
 	salesPrice: MonetaryValue;
+	/**
+	 * Represents the current status of a booking:
+	 * - Open: Available for booking
+	 * - OnRequest: Available but requires manual confirmation
+	 * - Booked: Successfully booked
+	 * - NonBookable: Not available for booking
+	 * - Cancelled: Was booked but has been cancelled
+	 * - None: Status unknown or not applicable
+	 */
 	bookingStatus?: BookingStatus;
 	/** The confirmation number on the supplier */
 	supplierConfirmationNumber?: string;
@@ -400,6 +441,15 @@ export interface InsuranceAdHocComponentResponse {
 	description?: string;
 	netPrice: MonetaryValue;
 	salesPrice: MonetaryValue;
+	/**
+	 * Represents the current status of a booking:
+	 * - Open: Available for booking
+	 * - OnRequest: Available but requires manual confirmation
+	 * - Booked: Successfully booked
+	 * - NonBookable: Not available for booking
+	 * - Cancelled: Was booked but has been cancelled
+	 * - None: Status unknown or not applicable
+	 */
 	bookingStatus?: BookingStatus;
 	/** The confirmation number on the supplier */
 	supplierConfirmationNumber?: string;
@@ -415,6 +465,15 @@ export interface UpsellItemRequest {
 	description?: string;
 	netPrice: MonetaryValue;
 	salesPrice: MonetaryValue;
+	/**
+	 * Represents the current status of a booking:
+	 * - Open: Available for booking
+	 * - OnRequest: Available but requires manual confirmation
+	 * - Booked: Successfully booked
+	 * - NonBookable: Not available for booking
+	 * - Cancelled: Was booked but has been cancelled
+	 * - None: Status unknown or not applicable
+	 */
 	status?: BookingStatus;
 	/** The external reference ID of the Upsell Item */
 	supplierConfirmationNumber?: string;
@@ -444,7 +503,28 @@ export interface AvailabilitySummary {
 	 * each component and the result of the recheck (e.g., not available anymore).
 	 */
 	components: AvailabilityComponent[];
-	packagePayableAmount: PackagePayableInfo;
+	/** Indicates whether the itinerary has non-bookable components or is outside the booking window. */
+	nonBookable: boolean;
+	/**
+	 * The end of the booking window for the itinerary. This is the latest date
+	 * the itinerary can be booked.
+	 * @format date
+	 * @example "2017-12-31"
+	 */
+	bookingWindowEnd: string;
+	/**
+	 * Represents the pricing info for the current checkout:
+	 * - packagePrice - the original total price of the package before any discounts are applied.
+	 * - previousPackagePrice - the previous price of the package before any discounts are applied, only set during booking changes.
+	 * - totalPackagePrice - the original price of the package before any discounts are applied and including any externally paid charges.
+	 * - discountedPackagePrice - the total sales price of the package after applying any discounts.
+	 * - downPayment - the configured down payment amount required to secure the booking.
+	 * - openAmount - the remaining balance that needs to be paid after accounting for any down payments.
+	 * - externallyPaidCharges - charges that must be paid externally, such as at the destination.
+	 * - promoCode - the details of the applied promo code.
+	 * - promoCodeDiscount - the discount amount due to the applied promo code.
+	 */
+	prices: PackagePayableInfo;
 	/**
 	 * A list of general findings by the recheck. The information may contain hints such as
 	 * pointing out that a stop has no hotel yet.
@@ -573,9 +653,11 @@ export interface StartBookingResponse {
 
 /** Traveler details */
 export interface TravelerDetails {
+	/** Contains personal contact information including name, address, and communication details. Used for both travelers and billing contacts. */
 	contactInfo?: ContactInfo;
 	/** Information about each passenger */
 	paxInfo: PaxInfo[];
+	/** Contains personal contact information including name, address, and communication details. Used for both travelers and billing contacts. */
 	billingInfo?: ContactInfo;
 }
 
@@ -594,29 +676,30 @@ export interface RequiredTravelerFields {
 		state?: RequiredTravelerFieldType;
 		gender?: RequiredTravelerFieldType;
 		taxNumber?: RequiredTravelerFieldType;
+		localIdNumber?: RequiredTravelerFieldType;
 	};
 	billing: {
 		firstName?: RequiredTravelerFieldType;
 		lastName?: RequiredTravelerFieldType;
 		email?: RequiredTravelerFieldType;
-		mobilePhone?: RequiredTravelerFieldType;
 		address1?: RequiredTravelerFieldType;
 		address2?: RequiredTravelerFieldType;
 		postalCode?: RequiredTravelerFieldType;
 		city?: RequiredTravelerFieldType;
 		country?: RequiredTravelerFieldType;
 		taxNumber?: RequiredTravelerFieldType;
+		localIdNumber?: RequiredTravelerFieldType;
 	};
 	passenger: {
 		firstName?: RequiredTravelerFieldType;
 		lastName?: RequiredTravelerFieldType;
 		secondOrAdditionalName?: RequiredTravelerFieldType;
 		gender?: RequiredTravelerFieldType;
-		number?: RequiredTravelerFieldType;
+		passportNumber?: RequiredTravelerFieldType;
 		nationality?: RequiredTravelerFieldType;
 		dateOfBirth?: RequiredTravelerFieldType;
-		expirationDate?: RequiredTravelerFieldType;
-		issuingCountry?: RequiredTravelerFieldType;
+		passportExpirationDate?: RequiredTravelerFieldType;
+		passportIssuingCountry?: RequiredTravelerFieldType;
 	};
 }
 
@@ -649,12 +732,25 @@ export interface ExternallyPaidCharges {
 	unitPrice: MonetaryValue;
 }
 
+/**
+ * Represents the pricing info for the current checkout:
+ * - packagePrice - the original total price of the package before any discounts are applied.
+ * - previousPackagePrice - the previous price of the package before any discounts are applied, only set during booking changes.
+ * - totalPackagePrice - the original price of the package before any discounts are applied and including any externally paid charges.
+ * - discountedPackagePrice - the total sales price of the package after applying any discounts.
+ * - downPayment - the configured down payment amount required to secure the booking.
+ * - openAmount - the remaining balance that needs to be paid after accounting for any down payments.
+ * - externallyPaidCharges - charges that must be paid externally, such as at the destination.
+ * - promoCode - the details of the applied promo code.
+ * - promoCodeDiscount - the discount amount due to the applied promo code.
+ */
 export interface PackagePayableInfo {
-	packageSalesPrice: MonetaryValue;
-	totalAmountToBePaid: MonetaryValue;
-	nonPayableAmount: MonetaryValue;
-	openPayment: MonetaryValue;
-	paymentDue: MonetaryValue;
+	packagePrice: MonetaryValue;
+	previousPackagePrice?: MonetaryValue;
+	totalPackagePrice: MonetaryValue;
+	discountedPackagePrice: MonetaryValue;
+	downPayment: MonetaryValue;
+	openAmount: MonetaryValue;
 	/**
 	 * Charges to be paid externally, meaning not on our platform. These are charges for
 	 * things that we want to show the price on our platform, however, when the user makes
@@ -662,7 +758,38 @@ export interface PackagePayableInfo {
 	 * destination.
 	 */
 	externallyPaidCharges: ExternallyPaidCharges;
+	/**
+	 * The promo code object with its details as defined in the booking management.
+	 * Either valueAbs or valueRel is provided, never both.
+	 */
+	promoCode?: PromoCode;
 	promoCodeDiscount?: MonetaryValue;
+}
+
+/**
+ * The promo code object with its details as defined in the booking management.
+ * Either valueAbs or valueRel is provided, never both.
+ */
+export interface PromoCode {
+	/** The unique identifier for the promo code */
+	code: string;
+	/** Optional title or name for the promo code */
+	title?: string | null;
+	/** Text describing the conditions or terms of the promo code */
+	conditionText: string;
+	valueAbsolute?: MonetaryValue;
+	/**
+	 * The relative discount value as a decimal (e.g., 0.1 for 10%)
+	 * @format double
+	 */
+	valueRelative?: number;
+	valueAbsolutePricingUnit?: PromoCodePricingUnit;
+}
+
+/** @default "PerBooking" */
+export enum PromoCodePricingUnit {
+	PerPax = 'PerPax',
+	PerBooking = 'PerBooking',
 }
 
 export interface PromoCodeRequest {
@@ -676,6 +803,11 @@ export interface ActivityQuestions {
 	questions: ActivityQuestion[];
 }
 
+/**
+ * Represents a question that needs to be answered for an activity booking.
+ * Questions can have different validation types (text, number, date) and may be required or optional.
+ * Some questions may have predefined answer options.
+ */
 export interface ActivityQuestion {
 	refId: string;
 	question: string;
@@ -699,6 +831,16 @@ export interface ActivityQuestionAnswer {
 	componentId: string;
 	questionRefId: string;
 	answer: string;
+}
+
+export interface ExternalBookingId {
+	/** The External Booking ID */
+	externalBookingId: string;
+}
+
+export interface ExternalCustomerId {
+	/** The External Customer ID */
+	externalCustomerId: string;
 }
 
 /** An array of Problem objects */

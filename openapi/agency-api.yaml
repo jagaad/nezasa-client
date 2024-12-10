@@ -1,0 +1,602 @@
+openapi: 3.0.3
+info:
+  title: Agency API
+  version: '1.0'
+  description: |
+    The Agency API allows CRUD (Create, Read, Update and Delete) functionality for the
+    travel agencies used in TripBuilder.
+  contact:
+    email: support@nezasa.com
+    url: https://www.nezasa.com
+servers:
+  - url: /inventory/api/{companyId}
+    variables:
+      companyId:
+        default: Nezasa
+paths:
+  /agency:
+    get:
+      summary: Lists travel agencies.
+      description: Lists all travel agencies for a tour operator.
+      operationId: getAgency
+      parameters:
+        - name: skip
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+        - name: onlyActive
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Returns an array of travel agencies with its details.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgencyResponse'
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+    post:
+      summary: Create a travel agency.
+      description: Creates a new travel agency.
+      operationId: postAgency
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgencyCreateRequest'
+        required: true
+      responses:
+        '200':
+          description: Returns the created travel agency
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgencyResponse'
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+  /agency/{agencyIdParam}:
+    get:
+      summary: Get single travel agency.
+      description: Gets the details of a single travel agency.
+      operationId: getAgencyAgencyidparam
+      parameters:
+        - name: agencyIdParam
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Returns the details of a single travel agency
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgencyResponse'
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+    delete:
+      summary: Change the agency status.
+      description: Changes the agency status to Inactive, by its id
+      operationId: deleteAgencyAgencyidparam
+      parameters:
+        - name: agencyIdParam
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+    patch:
+      summary: Update a travel agency.
+      description: Update an existing travel agency.
+      operationId: patchAgencyAgencyidparam
+      parameters:
+        - name: agencyIdParam
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgencyUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: Returns an object containing the updated travel agency
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgencyResponse'
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+components:
+  schemas:
+    AgencyBranch:
+      required:
+        - email
+      type: object
+      properties:
+        refId:
+          type: string
+          description:
+            an unique identifier for the TA branch. If omitted it will
+            be generated
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          description: the external references of the TA branch
+        location:
+          $ref: '#/components/schemas/Location'
+        mainBranch:
+          type: boolean
+          description: if this in the main branch of the TA
+        postalAddress:
+          $ref: '#/components/schemas/PostalAddress'
+        email:
+          type: string
+          description: the email of the TA branch
+        phone:
+          type: string
+          description: the phone of the TA branch
+        skypeId:
+          type: string
+          description: the skypeId of the TA branch
+        contactPerson:
+          type: string
+          description: the main contact person of the TA branch
+    AgencyCreateRequest:
+      required:
+        - shortName
+        - legalName
+        - adminEmail
+        - currency
+      type: object
+      properties:
+        refId:
+          type: string
+          description:
+            the refId of the TA. Ony admin users can specify the refId,
+            otherwise it will be generated based on the shortName
+        distributionChannelRefId:
+          type: string
+          description:
+            the distribution channel this agency belongs to. If not provided,
+            the current DC will be assumed.
+        cooperativeId:
+          type: string
+          description: the group/cooperative of the TA
+        shortName:
+          type: string
+          description: the shortname of the TA
+        legalName:
+          type: string
+          description: the legal name of the TA
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          description: the external references of the TA
+        adminEmail:
+          type: string
+          description: the email of the TA
+        defaultCommunicationLanguage:
+          type: string
+          description: the default communication language of the TA
+        slogan:
+          type: object
+          description: the slogan of the TA
+          additionalProperties:
+            type: string
+        iataNumber:
+          type: string
+          description: the IATA number of the TA
+        currency:
+          type: string
+          description: the default currency
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgencyBranch'
+          description:
+            the branches of the TA. It is recommended that at least one
+            branch is specified
+        isReferrerOnly:
+          type: boolean
+          description: if the TA represents a referrer (and not an actual travel agency
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+        paymentConfig:
+          $ref: '#/components/schemas/PaymentConfig'
+      description: To create a new travel agency
+    AgencyResponse:
+      required:
+        - refId
+        - distributionChannelRefId
+        - shortName
+        - legalName
+        - adminEmail
+        - currency
+      type: object
+      properties:
+        refId:
+          type: string
+          description: the refId of the TA
+        distributionChannelRefId:
+          type: string
+          description: the refId of distribution channel (DC) owning the TA
+        cooperativeId:
+          type: string
+          description: the group/cooperative of the TA
+        shortName:
+          type: string
+          description: the shortname of the TA
+        legalName:
+          type: string
+          description: the legal name of the TA
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          description: the external references of the TA
+        adminEmail:
+          type: string
+          description: the email of the TA
+        defaultCommunicationLanguage:
+          type: string
+          description: the default communication language of the TA
+        slogan:
+          type: object
+          description: the slogan of the TA
+          additionalProperties:
+            type: string
+        iataNumber:
+          type: string
+          description: the IATA number of the TA
+        currency:
+          type: string
+          description: the default currency
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgencyBranch'
+          description:
+            the branches of the TA. It is recommended that at least one
+            branch is specified
+        isReferrerOnly:
+          type: boolean
+          description: if the TA represents a referrer (and not an actual travel agency
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+        paymentConfig:
+          $ref: '#/components/schemas/PaymentConfig'
+      description: The travel agency details
+    AgencyUpdateRequest:
+      required:
+        - shortName
+        - legalName
+        - adminEmail
+        - currency
+      type: object
+      properties:
+        cooperativeId:
+          type: string
+          description: the group/cooperative of the TA
+        shortName:
+          type: string
+          description: the shortname of the TA
+        legalName:
+          type: string
+          description: the legal name of the TA
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          description: the external references of the TA
+        adminEmail:
+          type: string
+          description: the email of the TA
+        defaultCommunicationLanguage:
+          type: string
+          description: the default communication language of the TA
+        slogan:
+          type: object
+          description: the slogan of the TA
+          additionalProperties:
+            type: string
+        iataNumber:
+          type: string
+          description: the IATA number of the TA
+        currency:
+          type: string
+          description: the default currency
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgencyBranch'
+          description:
+            the branches of the TA. It is recommended that at least one
+            branch is specified
+        isReferrerOnly:
+          type: boolean
+          description: if the TA represents a referrer (and not an actual travel agency
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+        paymentConfig:
+          $ref: '#/components/schemas/PaymentConfig'
+      description: To update a travel agency
+    DownPaymentEnabled:
+      type: string
+      description:
+        Defines if the agency is relying on the default setting for down
+        payments from the distribution channel, or overwrites it either by disabling
+        or enabling it.
+      enum:
+        - Default
+        - Enabled
+        - Disabled
+    ExternalReference:
+      required:
+        - externalRefId
+        - externalSystemId
+      type: object
+      properties:
+        externalRefId:
+          type: string
+          description: The identifier of the owning entity in the external system
+        externalSystemId:
+          type: string
+          description:
+            'The external system. Used to identify the external system.
+            Supported values are: - Midoco (for suppliers mapped to Midoco) - SoftConEx
+            (for agencies mapped to SoftConEx) - TourOperatorProductCode (for suppliers
+            mapped to 3rd party tour operator systems)'
+      description:
+        The external reference maps the an entity in TripBuilder with an
+        entity in an external system.
+    Level:
+      type: string
+      description: The severity of the problem
+      enum:
+        - ERROR
+        - WARNING
+        - INFO
+    Location:
+      required:
+        - coordinate
+        - timeZoneId
+      type: object
+      properties:
+        coordinate:
+          type: array
+          items:
+            type: number
+            format: double
+          minItems: 2
+          maxItems: 2
+        timeZoneId:
+          type: string
+      description: the location of the TA branch
+    PaymentCategory:
+      type: string
+      enum:
+        - Invoice
+        - OnlinePayment
+    PaymentConfig:
+      required:
+        - downPayment
+      type: object
+      properties:
+        downPayment:
+          $ref: '#/components/schemas/DownPaymentEnabled'
+        downPaymentPercentage:
+          type: integer
+          description:
+            Defines the down payment percentage of the agency if for this
+            agency the overwrite has been enabled.
+          format: int32
+        downPaymentThresholdInDays:
+          type: integer
+          description:
+            Defines the down payment threshold in days before the departure
+            date of the agency if for this agency the overwrite has been enabled.
+          format: int32
+        paymentCategoriesIBE:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentCategory'
+          description:
+            Overwrite the enabled payment categories in the IBE checkout
+            for itineraries assigned to this agency.An empty list means that there
+            is no agency-specific overwrite. If both, multiple payment categories
+            are defined, then the first one will be considered the default one and
+            will be pre-selected on the checkout page.
+        paymentCategoriesB2BPortal:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentCategory'
+          description:
+            Overwrite the enabled payment categories in the checkout of
+            the b2b portal for itineraries assigned to this agency.An empty list means
+            that there is no agency-specific overwrite. If both, multiple payment
+            categories are defined, then the first one will be considered the default
+            one and will be pre-selected on the checkout page.
+      description: the payment checkout config for bookings by this agency
+    PostalAddress:
+      type: object
+      properties:
+        country:
+          type: string
+        countryCode:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        street1:
+          type: string
+        street2:
+          type: string
+        region:
+          type: string
+      description: the postal address of TA branch
+    Problem:
+      required:
+        - code
+        - detail
+        - level
+      type: object
+      properties:
+        code:
+          type: string
+          description: A specific code narrowing the type of Problem down
+        detail:
+          type: string
+          description:
+            A human readable explanation (localized to the language of
+            the user) of this problem
+        level:
+          $ref: '#/components/schemas/Level'
+        source:
+          $ref: '#/components/schemas/ProblemSource'
+      description:
+        A Problem object inspired by https://tools.ietf.org/html/rfc7807
+        (Problem Details for HTTP APIs)
+    ProblemResponse:
+      required:
+        - status
+      type: object
+      properties:
+        status:
+          type: integer
+          description: The HTTP status code generated for this problem response
+          format: int32
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/Problem'
+      description: An array of Problem objects
+    ProblemSource:
+      required:
+        - pointer
+      type: object
+      properties:
+        pointer:
+          type: string
+          description:
+            A reference to the associated entity in the request document
+            which caused the problem
+      description: An object containing references to the source of the error
+  securitySchemes:
+    httpAuth:
+      type: http
+      scheme: basic
+security:
+  - httpAuth: []

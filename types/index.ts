@@ -1,12 +1,49 @@
-export * as CheckoutApi from './checkout-api-v1';
-export * as ItineraryApi from './itinerary-api-v1';
-export * as LocationApi from './location-api-v1';
-export * as PaymentApi from './payment-transaction-api';
-export * as PlannerApi from './planner-api-v1';
-export * as TemplateApi from './template-api-v1';
-export * as WebhookApi from './webhook-api-models-v1';
+import type { WebhookEvent } from './api/webhook-api-models-v1';
 
-// TODO: Move it somehow in WebhookApi
+export * as AgencyApi from './api/agency-api';
+export * as CheckoutApi from './api/checkout-api-v1';
+export * as ConnectAccommodationsApi from './api/connect-accommodations-api';
+export * as ConnectActivitiesApi from './api/connect-activities-api';
+export * as ConnectTransportsApi from './api/connect-transports-api';
+export * as InventoryPictureApi from './api/inventory-picture-api';
+export * as InventorySupplierApi from './api/inventory-supplier-api';
+export * as ItineraryApi from './api/itinerary-api-v1';
+export * as LocationApi from './api/location-api-v1';
+export * as PaymentApi from './api/payment-transaction-api';
+export * as PlannerApi from './api/planner-api-v1';
+export * as TemplateApi from './api/template-api-v1';
+export * as WebhookApi from './api/webhook-api-models-v1';
+
+// TODO: Move it somewhere in WebhookApi
+export const WebhookEventEnum = {
+	booking_completed: 'booking_completed',
+	booking_requested: 'booking_requested',
+	booking_modified: 'booking_modified',
+	booking_failed: 'booking_failed',
+
+	cancellation_completed: 'cancellation_completed',
+
+	booking_change_initiated: 'booking_change_initiated',
+	booking_change_requested: 'booking_change_requested',
+	booking_change_completed: 'booking_change_completed',
+	booking_change_booking_failed: 'booking_change_booking_failed',
+
+	pax_changed: 'pax_changed',
+
+	payment_added: 'payment_added',
+	payment_deleted: 'payment_deleted',
+	payment_closed: 'payment_closed',
+
+	refund_added: 'refund_added',
+	refund_closed: 'refund_closed',
+	refund_deleted: 'refund_deleted',
+
+	ping: 'ping',
+} satisfies Record<WebhookEvent, WebhookEvent>;
+
+/**
+ * @deprecated Use {@link WebhookEventEnum} and {@link WebhookEvent} instead
+ */
 export enum WebhookEventType {
 	COMPLETED = 'booking_completed',
 	REQUESTED = 'booking_requested',
@@ -27,10 +64,12 @@ export enum WebhookEventType {
 	PING = 'ping',
 }
 
-declare module './checkout-api-v1' {
-	interface PackagePayableInfo {
-		// TODO: Docs don't provide this field
-		// But some that are provided do not exist at runtime
-		totalPackagePrice: MonetaryValue;
+declare module './api/webhook-api-models-v1' {
+	type WebhookEvent = WebhookCreateRequest['events'][number];
+
+	interface WebhookResponseEnhanced extends WebhookResponse {
+		events: WebhookEvent[];
 	}
+
+	type WebhookListResponseEnhanced = WebhookResponseEnhanced[];
 }

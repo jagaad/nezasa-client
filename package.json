@@ -5,7 +5,9 @@
 		"test": "echo \"Error: no test specified\" && exit 0",
 		"release": "np",
 		"generate": "./scripts/generate-api-types.sh",
-		"build": "npm run generate && tsc"
+		"postgenerate": "prettier --write --ignore-unknown types",
+		"prebuild": "npm run generate",
+		"build": "tsup types/index.ts --dts"
 	},
 	"repository": {
 		"type": "git",
@@ -30,6 +32,7 @@
 		"np": "^10.0.7",
 		"prettier": "^3.3.3",
 		"swagger-typescript-api": "^13.0.23",
+		"tsup": "^8.3.5",
 		"typescript": "^5.6.3"
 	},
 	"prettier": "@jagaad/prettier-config"
