@@ -523,6 +523,14 @@ export enum BookingStatus {
 	None = 'None',
 }
 
+export enum AdhocActivityType {
+	Tour = 'Tour',
+	Package = 'Package',
+	Ticket = 'Ticket',
+	Cruise = 'Cruise',
+	Other = 'Other',
+}
+
 /**
  * The request sent by the client containing the information required to insert or update
  * a generic ad-hoc component. The request contains only the pertinent information required
@@ -565,6 +573,7 @@ export interface GenericAdHocComponentUpsertRequest {
 		| 'NonBookable'
 		| 'Cancelled'
 		| 'None';
+	externalRefs?: ExternalReference[];
 }
 
 /**
@@ -606,6 +615,7 @@ export interface ActivityAdHocComponentUpsertRequest {
 		| 'Cancelled'
 		| 'None';
 	pictures?: Picture[];
+	activityType?: 'Tour' | 'Package' | 'Ticket' | 'Cruise' | 'Other';
 }
 
 /**
@@ -2903,6 +2913,7 @@ export interface ActivityAdHocComponent {
 	pictures?: Picture[];
 	/** Defines whether or not users are allowed to request bookings even if an allotment is exceeded */
 	isOnRequest?: boolean;
+	activityType: 'Tour' | 'Package' | 'Ticket' | 'Cruise' | 'Other';
 }
 
 /** An short summary of activity ad-hoc component to import */

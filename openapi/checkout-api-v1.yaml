@@ -1,15 +1,26 @@
 openapi: 3.0.0
 info:
   title: Checkout API (BETA)
-  version: 1.0.0
+  version: 0.1.0
   description: |
     API for managing the checkout process, including authentication, upsell items, traveler details, and booking.
     To manage payment transactions, we provide a separate API.
     Refer to https://docs.tripbuilder.app/Mo9reezaehiengah/payment-transaction-api.html for more information.
 
+    ## BETA Status
+    This API is currently in beta and under active development. Please note that:
+    - Non-backward compatible changes may be introduced
+    - New features and endpoints are being added regularly
+    - API behavior and responses might change without prior notice
+    - Not all use cases may be covered yet
+    - We recommend regularly checking the documentation for updates
+
+    We welcome your feedback! If you encounter any issues, have feature requests, or want to share your use cases,
+    please reach out to our team.
+
     ## Doc Version
 
-    Last Updated: 2024-10-22
+    Last Updated: 2024-11-29
 
     ## Workflow
     The following steps outline the workflow for using the Checkout API:
@@ -81,7 +92,7 @@ info:
     Nezasa uses conventional HTTP response codes to indicate the success or failure of an API request. In general,
     codes in the 2xx range indicate success, codes in the 4xx range indicate an error that failed given the
     information provided (e.g., a required parameter was omitted or is in the wrong format), and codes in the 5xx
-    range indicate an error with Nezasa’s servers.
+    range indicate an error with Nezasa's servers.
 
     ## Host
     The host api.tripbuilder.app is used as placeholder in this documentation. The actual host to be used may be
@@ -96,7 +107,7 @@ components:
   schemas:
     GeoLocation:
       type: object
-      description: Defines a geographic point such as an airport or area
+      description: Represents a geographic location with coordinates and country information. Used for airports, cities, and other points of interest.
       required:
         - name
         - coordinates
@@ -138,6 +149,14 @@ components:
 
     BookingStatus:
       type: string
+      description: |
+        Represents the current status of a booking:
+        - Open: Available for booking
+        - OnRequest: Available but requires manual confirmation
+        - Booked: Successfully booked
+        - NonBookable: Not available for booking
+        - Cancelled: Was booked but has been cancelled
+        - None: Status unknown or not applicable
       enum:
         - Open
         - OnRequest
@@ -168,6 +187,7 @@ components:
 
     ContactInfo:
       type: object
+      description: Contains personal contact information including name, address, and communication details. Used for both travelers and billing contacts.
       properties:
         firstName:
           type: string
@@ -177,7 +197,7 @@ components:
           type: string
         gender:
           type: string
-          enum: [male, female, other]
+          enum: [Male, Female]
         address:
           $ref: '#/components/schemas/Address'
         email:
@@ -190,6 +210,7 @@ components:
 
     PaxInfo:
       type: object
+      description: Detailed passenger information including personal details, travel documents, and contact information. Each passenger must have a unique refId.
       properties:
         refId:
           type: string
@@ -200,7 +221,7 @@ components:
           type: string
         gender:
           type: string
-          enum: [male, female, other]
+          enum: [Male, Female]
         age:
           type: integer
         birthDate:
@@ -284,6 +305,9 @@ components:
 
     UpsellItem:
       type: object
+      description: |
+        Represents an additional service or product that can be added to the booking.
+        Includes pricing information, supplier details, and booking status.
       required:
         - componentRefId
         - name
@@ -336,6 +360,9 @@ components:
           description: The ID of the itinerary
         title:
           type: string
+        externalCustomerId:
+          type: string
+          description: The external customer ID, in any.
         lastModified:
           type: string
         templateId:
@@ -382,32 +409,12 @@ components:
     Leg:
       type: object
       description: |
-        A Leg is a container object which houses a series of feeder connections and a stop. The purpose
-        of the feeder connections is to bring the PAX from either the start location (if this happens to
-        be the first leg) or from a previous leg to the stop.
+        Represents a segment of the journey between two locations. A leg consists of:
+        1. A series of connections (transport between locations)
+        2. A stop (stay at a location)
+        3. Optional activities at the stop location
 
-        ```
-        +-------------------------+
-        | +-----------------+     |
-        | |      C1         |  +  |
-        | +----+------------+  |  |
-        |      |               |  |
-        | +----+------------+  |  |
-        | |      C2         |  | Connections
-        | +----+------------+  |  |
-        |      |               |  |
-        | +----+------------+  |  |
-        | |      Cn         |  +  |
-        | +----+------------+     |
-        |      |                  |
-        | +----+------------+     |
-        | |                 |     |
-        | |  Stop           |     |
-        | | (Area, Nights)  |     |
-        | |                 |     |
-        | +-----------------+     |
-        +-------------------------+
-        ```
+        The leg connects the previous stop to the current one through various transportation options.
       required:
         - id
         - startDate
@@ -425,8 +432,11 @@ components:
     Stop:
       type: object
       description: |
-        Describes the period in which a traveler stays in one area. This also includes the hotels (accommodations)
-        for the entire duration of the stop.
+        Represents a stay at a specific location during the journey. Includes:
+        - Location details (city, area, or point of interest)
+        - Duration of stay (number of nights)
+        - Accommodation details
+        - Flexible duration options (minimum and maximum nights)
       required:
         - stopLocation
         - area
@@ -610,11 +620,18 @@ components:
     PaymentTransaction:
       type: object
       required:
+        - transactionId
         - amount
         - status
         - paymentMethod
         - created
       properties:
+        transactionId:
+          type: string
+          description: The transaction ID
+        externalRefId:
+          type: string
+          description: The external reference ID
         amount:
           $ref: '#/components/schemas/MonetaryValue'
         status:
@@ -638,6 +655,9 @@ components:
             - Future
             - Unknown
             - Other
+        paymentMethodName:
+          type: string
+          description: Defined if the payment method name is of type "Other"
         created:
           type: string
           description: A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
@@ -666,6 +686,9 @@ components:
         checkoutState:
           type: string
           description: The checkout Status
+        externalBookingId:
+          type: string
+          description: The external booking ID, if any
         termsAndConditions:
           $ref: '#/components/schemas/TermsAndConditions'
         itinerary:
@@ -840,7 +863,9 @@ components:
         as rechecked components and general recheck remarks.
       required:
         - components
-        - packagePayableAmount
+        - bookingWindowEnd
+        - nonBookable
+        - prices
         - remarks
       properties:
         components:
@@ -850,7 +875,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AvailabilityComponent'
-        packagePayableAmount:
+        nonBookable:
+          description: |
+            Indicates whether the itinerary has non-bookable components or is outside the booking window.
+          type: boolean
+        bookingWindowEnd:
+          description: |
+            The end of the booking window for the itinerary. This is the latest date
+            the itinerary can be booked.
+          type: string
+          format: date
+          example: '2017-12-31'
+        prices:
           $ref: '#/components/schemas/PackagePayableInfo'
         remarks:
           description: |
@@ -1046,6 +1082,8 @@ components:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
             taxNumber:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
+            localIdNumber:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
         billing:
           type: object
           properties:
@@ -1054,8 +1092,6 @@ components:
             lastName:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
             email:
-              $ref: '#/components/schemas/RequiredTravelerFieldType'
-            mobilePhone:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
             address1:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
@@ -1069,6 +1105,8 @@ components:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
             taxNumber:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
+            localIdNumber:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
         passenger:
           type: object
           properties:
@@ -1080,15 +1118,15 @@ components:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
             gender:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
-            number:
+            passportNumber:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
             nationality:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
             dateOfBirth:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
-            expirationDate:
+            passportExpirationDate:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
-            issuingCountry:
+            passportIssuingCountry:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
 
     RequiredTravelerFieldType:
@@ -1137,28 +1175,88 @@ components:
 
     PackagePayableInfo:
       type: object
+      description: |
+        Represents the pricing info for the current checkout:
+        - packagePrice - the original total price of the package before any discounts are applied.
+        - previousPackagePrice - the previous price of the package before any discounts are applied, only set during booking changes.
+        - totalPackagePrice - the original price of the package before any discounts are applied and including any externally paid charges.
+        - discountedPackagePrice - the total sales price of the package after applying any discounts.
+        - downPayment - the configured down payment amount required to secure the booking.
+        - openAmount - the remaining balance that needs to be paid after accounting for any down payments.
+        - externallyPaidCharges - charges that must be paid externally, such as at the destination.
+        - promoCode - the details of the applied promo code.
+        - promoCodeDiscount - the discount amount due to the applied promo code.
       required:
-        - packageSalesPrice
-        - totalAmountToBePaid
-        - nonPayableAmount
-        - openPayment
-        - paymentDue
+        - packagePrice
+        - totalPackagePrice
+        - downPayment
+        - discountedPackagePrice
+        - openAmount
         - externallyPaidCharges
       properties:
-        packageSalesPrice:
+        packagePrice:
           $ref: '#/components/schemas/MonetaryValue'
-        totalAmountToBePaid:
+          # description: The original total price of the package before any discounts are applied.
+        previousPackagePrice:
           $ref: '#/components/schemas/MonetaryValue'
-        nonPayableAmount:
+          # description: The original total price of the package before any discounts are applied.
+        totalPackagePrice:
           $ref: '#/components/schemas/MonetaryValue'
-        openPayment:
+          # description: The original price of the package before any discounts are applied and including any externally paid charges.
+        discountedPackagePrice:
           $ref: '#/components/schemas/MonetaryValue'
-        paymentDue:
+          # description: The total sales price of the package after applying any discounts.
+        downPayment:
           $ref: '#/components/schemas/MonetaryValue'
+          # description: The configured down payment amount required to secure the booking.
+        openAmount:
+          $ref: '#/components/schemas/MonetaryValue'
+          # description: The remaining balance that needs to be paid after accounting for any down payments.
         externallyPaidCharges:
           $ref: '#/components/schemas/ExternallyPaidCharges'
+          # description: Charges that must be paid externally, such as at the destination.
+        promoCode:
+          $ref: '#/components/schemas/PromoCode'
+          # description: The details of the applied promo code.
         promoCodeDiscount:
           $ref: '#/components/schemas/MonetaryValue'
+          # description: The discount amount due to the applied promo code.
+
+    PromoCode:
+      description: |
+        The promo code object with its details as defined in the booking management.
+        Either valueAbs or valueRel is provided, never both.
+      type: object
+      required:
+        - code
+        - conditionText
+      properties:
+        code:
+          type: string
+          description: The unique identifier for the promo code
+        title:
+          type: string
+          nullable: true
+          description: Optional title or name for the promo code
+        conditionText:
+          type: string
+          description: Text describing the conditions or terms of the promo code
+        valueAbsolute:
+          $ref: '#/components/schemas/MonetaryValue'
+          # description: The absolute discount value (if applicable)
+        valueRelative:
+          type: number
+          format: double
+          description: The relative discount value as a decimal (e.g., 0.1 for 10%)
+        valueAbsolutePricingUnit:
+          $ref: '#/components/schemas/PromoCodePricingUnit'
+
+    PromoCodePricingUnit:
+      type: string
+      enum:
+        - PerPax
+        - PerBooking
+      default: PerBooking
 
     PromoCodeRequest:
       type: object
@@ -1187,6 +1285,10 @@ components:
 
     ActivityQuestion:
       type: object
+      description: |
+        Represents a question that needs to be answered for an activity booking.
+        Questions can have different validation types (text, number, date) and may be required or optional.
+        Some questions may have predefined answer options.
       required:
         - refId
         - question
@@ -1237,6 +1339,24 @@ components:
           type: string
         answer:
           type: string
+
+    ExternalBookingId:
+      type: object
+      required:
+        - externalBookingId
+      properties:
+        externalBookingId:
+          type: string
+          description: The External Booking ID
+
+    ExternalCustomerId:
+      type: object
+      required:
+        - externalCustomerId
+      properties:
+        externalCustomerId:
+          type: string
+          description: The External Customer ID
 
     ProblemResponse:
       type: object
@@ -1428,6 +1548,20 @@ components:
           schema:
             $ref: '#/components/schemas/OptIns'
 
+    ExternalBookingIdResponse:
+      description: External Booking ID response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ExternalBookingId'
+
+    ExternalCustomerIdResponse:
+      description: External Customer ID response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ExternalCustomerId'
+
     UnauthorizedError:
       description: Unauthorized
       content:
@@ -1454,10 +1588,16 @@ paths:
     post:
       tags:
         - Checkout
-      summary: Create checkout models and start the checkout process
-      description: >
-        This endpoint initializes the checkout process by creating the necessary checkout models.
-        The client must provide an itinerary ID to start the process.
+      summary: Create a new checkout session
+      description: |
+        Initializes a new checkout process for an itinerary. This is the first step in the booking flow.
+
+        The endpoint:
+        1. Creates necessary checkout models
+        2. Associates the itinerary with the checkout
+        3. Returns a URL for the checkout flow
+
+        If a checkout already exists for this itinerary, returns the existing checkout information.
       parameters:
         - name: itineraryId
           in: path
@@ -1513,12 +1653,16 @@ paths:
   /checkout/v1/checkouts/{checkoutId}/availability-check:
     post:
       tags:
-        - Checkout
-      summary: Runs availability check and updates pricing
-      description: >
-        This endpoint performs an availability check for the current checkout session.
-        It ensures that all items in the checkout are still available for booking and updates the pricing information.
-        This is the only way to get updated pricing information that clients will need to process payments on their side before booking.
+        - Availability
+      summary: Verify availability and update prices
+      description: |
+        Performs a comprehensive check of all components in the checkout:
+        1. Verifies current availability of all items
+        2. Updates prices to reflect current rates
+        3. Identifies any booking conflicts or restrictions
+        4. Returns detailed availability status for each component
+
+        This check should be performed before proceeding with payment to ensure accurate pricing and availability.
       parameters:
         - name: checkoutId
           in: path
@@ -1526,6 +1670,14 @@ paths:
           description: The unique identifier of the checkout session
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Empty object required
+              example: {}
       responses:
         '200':
           $ref: '#/components/responses/AvailabilityCheckResponse'
@@ -1539,10 +1691,19 @@ paths:
   /checkout/v1/checkouts/{checkoutId}/prices:
     get:
       tags:
-        - Checkout
-      summary: Fetch pricing information from the checkout
-      description: >
-        This endpoint returns the pricing information from the checkout session.
+        - Availability & Pricing
+      summary: Fetch pricing information for the checkout
+      description: |
+        Represents the pricing info for the current checkout:
+        - packagePrice - the original total price of the package before any discounts are applied.
+        - previousPackagePrice - the previous price of the package before any discounts are applied, only set during booking changes.
+        - totalPackagePrice - the original price of the package before any discounts are applied and including any externally paid charges.
+        - discountedPackagePrice - the total sales price of the package after applying any discounts.
+        - downPayment - the configured down payment amount required to secure the booking.
+        - openAmount - the remaining balance that needs to be paid after accounting for any down payments.
+        - externallyPaidCharges - charges that must be paid externally, such as at the destination.
+        - promoCode - the details of the applied promo code.
+        - promoCodeDiscount - the discount amount due to the applied promo code.
       parameters:
         - name: checkoutId
           in: path
@@ -1563,11 +1724,18 @@ paths:
   /checkout/v1/checkouts/{checkoutId}/book:
     post:
       tags:
-        - Checkout
-      summary: Starts a synchronous booking process
-      description: >
-        This endpoint starts the booking process for the current checkout session.
-        The client must provide the traveler details and opt-ins to start the booking process.
+        - Booking
+      summary: Complete booking process synchronously
+      description: |
+        Finalizes the booking process in a synchronous manner. The endpoint:
+        1. Validates all required information is present
+        2. Processes final availability check
+        3. Confirms bookings with all suppliers
+        4. Creates booking records
+        5. Returns complete booking details
+
+        Use this endpoint when immediate booking confirmation is required.
+        For long-running bookings, use the asynchronous endpoint instead.
       parameters:
         - name: checkoutId
           in: path
@@ -1575,6 +1743,14 @@ paths:
           description: The unique identifier of the checkout session
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Empty object required
+              example: {}
       responses:
         '200':
           $ref: '#/components/responses/BookingResponse'
@@ -1588,11 +1764,23 @@ paths:
   /checkout/v1/checkouts/{checkoutId}/start-booking:
     post:
       tags:
-        - Checkout
-      summary: Start the booking process asynchronous
-      description: >
-        This endpoint starts the booking process for the current checkout session.
-        The client must provide the traveler details and opt-ins to start the booking process.
+        - Booking
+      summary: Start booking process asynchronously
+      description: |
+        Initiates an asynchronous booking process. Before starting the actual booking,
+        performs a synchronous availability check first:
+
+        1. Runs immediate availability check
+           - If availability issues are found, returns immediately with error details
+           - If all components are available, proceeds with booking
+
+        2. If availability check passes, starts the async booking process:
+           - Validates all required information
+           - Initiates background booking processes with suppliers
+           - Returns immediately with a booking status
+           - Triggers notifications when booking is complete
+
+        The booking status can be monitored through the main checkout endpoint.
       parameters:
         - name: checkoutId
           in: path
@@ -1600,6 +1788,14 @@ paths:
           description: The unique identifier of the checkout session
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Empty object required
+              example: {}
       responses:
         '200':
           $ref: '#/components/responses/StartBookingResponse'
@@ -1681,7 +1877,7 @@ paths:
         - name: insuranceId
           in: path
           required: true
-          description: The unique identifier of the insurence component
+          description: The unique identifier of the insurance component
           schema:
             type: string
       requestBody:
@@ -1697,6 +1893,30 @@ paths:
           $ref: '#/components/responses/ProblemResponseError'
         '404':
           description: Checkout not found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    delete:
+      tags:
+        - Insurances
+      summary: Delete and insurance from the checkout
+      description: >
+        This endpoint allows the client to delete an insurance from the checkout session.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+        - name: insuranceId
+          in: path
+          required: true
+          description: The unique identifier of the insurance component
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Insurance item deleted successfully
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -1868,7 +2088,7 @@ paths:
   /checkout/v1/checkouts/{checkoutId}/required-traveler-details:
     get:
       tags:
-        - Checkout
+        - Traveler Information
       summary: Get required traveler details for the checkout based on the itinerary and availability check
       description: >
         This endpoint retrieves the required traveler details for the current checkout session.
@@ -1893,7 +2113,7 @@ paths:
   /checkout/v1/checkouts/{checkoutId}/traveler-details:
     post:
       tags:
-        - Checkout
+        - Traveler Information
       summary: Save traveler details for the checkout
       description: >
         This endpoint allows the client to save traveler details for the current checkout session.
@@ -1932,7 +2152,7 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
     get:
       tags:
-        - Checkout
+        - Traveler Information
       summary: Retrieve saved traveler details for the checkout
       description: >
         This endpoint retrieves the saved traveler details for the current checkout session.
@@ -1971,7 +2191,7 @@ paths:
   /checkout/v1/checkouts/{checkoutId}/activity-questions:
     get:
       tags:
-        - Checkout
+        - Activities
       summary: Retrieve activity questions for the checkout
       description: >
         This endpoint retrieves the activity questions for the current checkout session.
@@ -1992,11 +2212,11 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
     post:
       tags:
-        - Checkout
-      summary: Save traveler details for the checkout
+        - Activities
+      summary: Answer activity questions for the checkout
       description: >
-        This endpoint allows the client to save traveler details for the current checkout session.
-        The client must provide the traveler details, including contact information, passenger information, and billing information.
+        This endpoint allows the customer to save answers to activity questions in the current checkout session.
+        The client can use this information to collect additional information from the user before completing the booking.
       parameters:
         - name: checkoutId
           in: path
@@ -2009,12 +2229,9 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                answers:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/ActivityQuestionAnswer'
+              type: array
+              items:
+                $ref: '#/components/schemas/ActivityQuestionAnswer'
       responses:
         '200':
           $ref: '#/components/responses/ActivityQuestionsResponse'
@@ -2028,13 +2245,18 @@ paths:
   /checkout/v1/checkouts/{checkoutId}/promo-codes:
     post:
       tags:
-        - Checkout
-      summary: Add a promo code to the checkout
-      description: >
-        This endpoint enables clients to apply a promo code to an existing checkout session.
-        Before applying the promo code, the system performs all necessary validations to ensure
-        the code is valid and applicable to the current checkout. This might include checks for
-        expiration, usage limits, and other configured conditions.
+        - Promotions
+      summary: Apply a promotion code
+      description: |
+        Applies a promotional code to the checkout and recalculates prices.
+
+        The process includes:
+        1. Validation of the promo code (expiry, usage limits, conditions)
+        2. Verification of applicability to the current checkout
+        3. Application of the discount
+        4. Recalculation of all prices
+
+        Returns updated pricing information including the applied discount.
       parameters:
         - name: checkoutId
           in: path
@@ -2057,11 +2279,33 @@ paths:
           $ref: '#/components/responses/ProblemResponseError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+    delete:
+      tags:
+        - Promotions
+      summary: Remove a promo code from the checkout
+      description: >
+        This endpoint allows clients to remove a promo code from an existing checkout session.
+        This is useful when the client wants to remove a previously applied promo code from the checkout.
+        The system will recalculate the pricing information based on the new state of the checkout.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      responses:
+        '204':
+          description: PromoCode removed successfully
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /checkout/v1/checkouts/{checkoutId}/promo-codes/redeem:
     post:
       tags:
-        - Checkout
+        - Promotions
       summary: Redeem a promo code to the checkout
       description: >
         This endpoint allows clients to mark a promo code as redeemed within a specific checkout session.
@@ -2080,11 +2324,13 @@ paths:
           schema:
             type: string
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
               type: object
+              description: Empty object required
+              example: {}
       responses:
         '200':
           $ref: '#/components/responses/PromoCodeResponse'
@@ -2098,7 +2344,7 @@ paths:
   /checkout/v1/checkouts/{checkoutId}/optins:
     get:
       tags:
-        - Checkout
+        - Marketing & Preferences
       summary: Retrieves the opt-ins on this checkout
       description: >
         This endpoint retrieves the opt-ins for the current checkout session.
@@ -2118,7 +2364,7 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
     post:
       tags:
-        - Checkout
+        - Marketing & Preferences
       summary: Adds new opt-ins for the checkout
       description: >
         This endpoint allows the client to add opt-ins for the current checkout session.
@@ -2151,7 +2397,7 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
     delete:
       tags:
-        - Checkout
+        - Marketing & Preferences
       summary: Deletes the opt-ins for this checkout
       description: >
         This endpoint allows the client to delete the opt-ins for the current checkout session.
@@ -2168,6 +2414,64 @@ paths:
         '400':
           $ref: '#/components/responses/ProblemResponseError'
         '404':
+          $ref: '#/components/responses/ProblemResponseError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/external-booking-id:
+    put:
+      tags:
+        - External References
+      summary: Update the external booking ID for the checkout
+      description: >
+        This endpoint allows the client to update the external
+        booking ID for the current checkout session.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalBookingId'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExternalBookingIdResponse'
+        '400':
+          $ref: '#/components/responses/ProblemResponseError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /checkout/v1/checkouts/{checkoutId}/external-customer-id:
+    put:
+      tags:
+        - External References
+      summary: Update the external customer ID for the checkout
+      description: >
+        This endpoint allows the client to update the external
+        customer ID for the current checkout session.
+      parameters:
+        - name: checkoutId
+          in: path
+          required: true
+          description: The unique identifier of the checkout session
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalCustomerId'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExternalCustomerIdResponse'
+        '400':
           $ref: '#/components/responses/ProblemResponseError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'

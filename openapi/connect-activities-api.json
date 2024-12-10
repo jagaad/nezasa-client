@@ -1,0 +1,4234 @@
+{
+	"openapi": "3.0.3",
+	"info": {
+		"description": "The Activity Service API is a web service that provides access to a range\nof activities for users. It's primarily designed to allow users to search,\nview, book, and cancel activities in an efficient and user-friendly manner.\n\nHere are the key functionalities of the API:\n\n1. **Get List of Activities**: This endpoint returns a list of all\n   available activities. Each activity comes with basic information\n   like name and description.\n2. **Get Activity Description**: This endpoint provides a detailed\n   description of a specific activity. It requires the ID of the activity\n  as input.\n3. **Check Activity Availability**: This feature is integrated within the\n   activity description endpoint. Along with the description, it also shows\n   the current availability status of the activity.\n4. **Book an Activity**: This endpoint allows users to book a specific\n   activity. It requires the ID of the activity and user details for\n   successful booking.\n5. **Cancel Booking**: This endpoint allows users to cancel their booking\n   for a specific activity. It requires the ID of the booking to perform\n   the cancellation.\n\nThis API is designed to be RESTful, using standard HTTP methods like\nGET, POST, and DELETE, and it primarily exchanges data in JSON format.\n\n### Change History\n\n| API Version | Docs Version | Changes                                                                                                                                      |\n|-------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------|\n| 1.0         | 31.05.2023   | Initial version                                                                                                                              |\n\n### Authentication\nAll API requests must be made over HTTPS.\n",
+		"title": "Connect API for Activities",
+		"version": "1.0.1"
+	},
+	"servers": [
+		{
+			"description": "production mock server",
+			"url": "https://connectapi.stg.nezasa.com"
+		}
+	],
+	"security": [
+		{
+			"BearerAuth": []
+		}
+	],
+	"tags": [
+		{
+			"name": "Heartbeat"
+		},
+		{
+			"description": "This API uses POST instead of GET for some read operations.\nThis is due to the complexity and size of some queries.\n\nIn HTTP/1.1, GET is typically used for data retrieval. It\nshould be safe and idempotent, causing no side effects.\nHowever, GET has limitations with complex queries or\nlarge data. For instance, some servers or browsers limit\nthe maximum URL length for GET requests.\n\nPOST requests carry their data in the body of the request.\nThis allows for larger and more complex data to be sent.\nThis is useful when the data volume or complexity of\nquery parameters exceeds GET limitations.\n\nIn this API, POST is used for some read operations to\novercome these GET limitations. This allows handling\nof complex queries and large data effectively,\nensuring reliable and efficient API operation.",
+			"name": "Offers"
+		},
+		{
+			"name": "Bookings"
+		}
+	],
+	"paths": {
+		"/v1/heartbeat": {
+			"get": {
+				"description": "This endpoint, often known as a \"health check\" endpoint, is used for\nmonitoring and assessing the status of the service. Its main function\nis to signal the health of the service, aiding in identifying any\npotential issues or service breakdowns.\n\nTripBuilder will periodically call this endpoint to check the\nservice's status. The response from this health check endpoint is used\nto assess the current condition of the service. If the service is\noperating correctly, the endpoint will return a positive\nacknowledgment, i.e. a HTTP 200 status code and a message indicating\nthe service's health.\n\nOn the other hand, if the service is not functioning as expected, the\nendpoint will return an error status code and potentially additional\ndata about the issue's nature.\n\nThis proactive health check allows for prompt detection and\nresolution of issues, ensuring the service's reliability and smooth\nfunctioning.",
+				"operationId": "ActivitiesV1_Heartbeat",
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Status"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Status"
+								}
+							}
+						},
+						"description": "An unexpected error response."
+					}
+				},
+				"summary": "Healthcheck endpoint",
+				"tags": ["Heartbeat"]
+			}
+		},
+		"/v1/login": {
+			"post": {
+				"description": "This endpoint allows a user to authenticate before making any request.\nUpon successful authentication, the endpoint returns a JSON\nresponse with the bearer token. In case of an error, a default error\nresponse is returned.",
+				"operationId": "ActivitiesV1_Login",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/LoginRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/LoginResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Status"
+								}
+							}
+						},
+						"description": "An unexpected error response."
+					}
+				},
+				"summary": "Obtain Bearer token",
+				"tags": ["Login, Auth, Authentication"]
+			}
+		},
+		"/v1/activities": {
+			"post": {
+				"description": "This endpoint allows users to search for bookable activities in the specified period.\nWe expect a single offer for each activity, preferably a basic category offer for an adult.\nA separate call to a different endpoint will fetch the details, including all offers, of the activity.",
+				"operationId": "ActivitiesV1_Offers",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ActivitiesV1_Offers_request"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivityOfferResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Status"
+								}
+							}
+						},
+						"description": "An unexpected error response."
+					}
+				},
+				"summary": "Get a list of offers.",
+				"tags": ["Offers"]
+			}
+		},
+		"/v1/activities/{reference}": {
+			"post": {
+				"description": "The reference of the offer. This value is returned by ActivityOffer message.",
+				"operationId": "ActivitiesV1_OfferDetails",
+				"parameters": [
+					{
+						"description": "The reference of the offer. This value is returned by ActivityOffer message.",
+						"in": "path",
+						"name": "reference",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ActivitiesV1_OfferDetails_request"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivityOfferDetailsResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Status"
+								}
+							}
+						},
+						"description": "An unexpected error response."
+					}
+				},
+				"summary": "Get the detail of an activity offer",
+				"tags": ["Offers"]
+			}
+		},
+		"/v1/activity": {
+			"delete": {
+				"operationId": "ActivitiesV1_Cancel",
+				"parameters": [
+					{
+						"description": "The booking identifier",
+						"in": "query",
+						"name": "bookingId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "The offer reference",
+						"in": "query",
+						"name": "reference",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Optional. the sub-items of the booking so that the cancellation can be done",
+						"in": "query",
+						"name": "itemsIds",
+						"schema": {
+							"items": {
+								"type": "string"
+							},
+							"type": "array"
+						},
+						"style": "form"
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivityBookingCancellationResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Status"
+								}
+							}
+						},
+						"description": "An unexpected error response."
+					}
+				},
+				"summary": "Cancel a previously booked activity",
+				"tags": ["Bookings"]
+			},
+			"post": {
+				"description": "This endpoint allows a user to book an activity using various parameters.\nUpon successful booking, the endpoint returns a JSON\nresponse with booking details. In case of an error, a default error\nresponse is returned.",
+				"operationId": "ActivitiesV1_Book",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AvailabilityAndBookRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivityBookingBookResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Status"
+								}
+							}
+						},
+						"description": "An unexpected error response."
+					}
+				},
+				"summary": "Book an activity",
+				"tags": ["Bookings"]
+			}
+		},
+		"/v1/activity/{reference}": {
+			"post": {
+				"operationId": "ActivitiesV1_CheckAvailability",
+				"parameters": [
+					{
+						"description": "The reference of the offer. This value is returned by ActivityOffer message.",
+						"in": "path",
+						"name": "reference",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AvailabilityAndBookRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivityBookingAvailabilityCheckResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Status"
+								}
+							}
+						},
+						"description": "An unexpected error response."
+					}
+				},
+				"summary": "Check availability of an activity offer",
+				"tags": ["Offers"]
+			}
+		},
+		"/v1/activityBooking": {
+			"get": {
+				"description": "Fetch a list of already booked activities for the given booking that\ncan be pulled from the provider.",
+				"operationId": "ActivitiesV1_GetBooking",
+				"parameters": [
+					{
+						"description": "Generic ID of the booking in system. A single booking may contain more than one activity/tickets booked.\n",
+						"in": "query",
+						"name": "bookingId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "The desired language in the response (2 letter code)",
+						"in": "query",
+						"name": "lang",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "The desired currency in the response (3 letter code)",
+						"in": "query",
+						"name": "currency",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivityBookingGetBookingResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Status"
+								}
+							}
+						},
+						"description": "An unexpected error response."
+					}
+				},
+				"summary": "Fetch a list of already booked activities",
+				"tags": ["Bookings"]
+			}
+		},
+		"/v1/activityBookingDetails": {
+			"get": {
+				"description": "Fetch details of an already booked activities from the provider.",
+				"operationId": "ActivitiesV1_BookingDetails",
+				"parameters": [
+					{
+						"description": "Generic ID of the booking in system. A single booking may contain more than one activity/tickets booked.\n",
+						"in": "query",
+						"name": "bookingId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "The desired language in the response (2 letter code)",
+						"in": "query",
+						"name": "lang",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "The desired currency in the response (3 letter code)",
+						"in": "query",
+						"name": "currency",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Specific IDs of the activities in the booking. It is expected that exactly one activity will match every ID.\n",
+						"in": "query",
+						"name": "activityIds",
+						"required": true,
+						"schema": {
+							"items": {
+								"type": "string"
+							},
+							"type": "array"
+						},
+						"style": "form"
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivityBookingGetBookingDetailsResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"default": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Status"
+								}
+							}
+						},
+						"description": "An unexpected error response."
+					}
+				},
+				"summary": "Fetch booking details.",
+				"tags": ["Bookings"]
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"Status": {
+				"example": {
+					"code": 0,
+					"details": ["details", "details"],
+					"message": "message"
+				},
+				"properties": {
+					"code": {
+						"format": "int32",
+						"type": "integer"
+					},
+					"message": {
+						"type": "string"
+					},
+					"details": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"required": ["message"],
+				"type": "object"
+			},
+			"LoginRequest": {
+				"example": {
+					"password": "password",
+					"user": "user"
+				},
+				"properties": {
+					"user": {
+						"description": "Unique ID of the account",
+						"type": "string"
+					},
+					"password": {
+						"description": "Account password, a secret string.",
+						"type": "string"
+					}
+				},
+				"required": ["password", "user"],
+				"type": "object"
+			},
+			"LoginResponse": {
+				"description": "Returns the bearer token upon successful authentication or a list of notifications.\nThe expiration value in the authentication response is useful to keep accurate track of when a token will expire.",
+				"example": {
+					"expiresInMinutes": 0,
+					"accessToken": "accessToken"
+				},
+				"properties": {
+					"accessToken": {
+						"description": "The valid bearer token",
+						"type": "string"
+					},
+					"expiresInMinutes": {
+						"description": "The expiration of the token in minutes",
+						"format": "int32",
+						"type": "integer"
+					}
+				},
+				"required": ["accessToken", "expiresInMinutes"],
+				"title": "Represents authentication response",
+				"type": "object"
+			},
+			"Language": {
+				"default": "de",
+				"description": "2-letter code (ISO 639-1)",
+				"enum": ["de", "en", "fr", "it", "nl", "es", "fi", "pt"],
+				"example": "de",
+				"title": "Supported languages",
+				"type": "string"
+			},
+			"CommonPaging": {
+				"example": {
+					"resultsFrom": 7,
+					"total": 5,
+					"pageSize": 2
+				},
+				"properties": {
+					"total": {
+						"description": "Total number of results\nCan be ignored in requests, the response always give back this information",
+						"format": "int32",
+						"type": "integer"
+					},
+					"pageSize": {
+						"description": "Number of results per page\nIf the parameter is not specified, the pageSize is the total number of results",
+						"format": "int32",
+						"type": "integer"
+					},
+					"resultsFrom": {
+						"description": "Position (zero based) of the first result to retrieve\nIf the parameter is not specified, the value is 0",
+						"format": "int32",
+						"type": "integer"
+					}
+				},
+				"title": "Paging management for a request",
+				"type": "object"
+			},
+			"CommonTravelPeriod": {
+				"description": "Generic travel period",
+				"example": {
+					"endDate": "2023-08-14",
+					"nights": 1,
+					"startTime": "12:00:00",
+					"endTime": "16:00:00",
+					"startDate": "2024-08-01"
+				},
+				"properties": {
+					"startDate": {
+						"description": "Desired starting date of the product represented in ISO8601 format (yyyy-MM-dd)",
+						"example": "2024-08-01",
+						"type": "string"
+					},
+					"startTime": {
+						"description": "Desired starting zoned date/time of the product in ISO8601 format (HH:mm:ss.SSS).\nEmpty if the activity doesn't have a specific start time (e.g. full day).",
+						"example": "12:00:00",
+						"type": "string"
+					},
+					"endDate": {
+						"description": "Desired ending date of the product represented in ISO8601 format (yyyy-MM-dd)\nEmpty if the activity doesn't have a specific end time (e.g. full day).",
+						"example": "2023-08-14",
+						"type": "string"
+					},
+					"endTime": {
+						"description": "Desired ending zoned date/time of the product in ISO8601 format (HH:mm:ss.SSS).",
+						"example": "16:00:00",
+						"type": "string"
+					},
+					"nights": {
+						"description": "Duration in nights of the product",
+						"example": 1,
+						"format": "int32",
+						"type": "integer"
+					}
+				},
+				"required": ["endDate", "startDate"],
+				"type": "object"
+			},
+			"GeoLocation": {
+				"description": "The location can be represented in one of the following types (geoCircle, geoPolygon or destinationId)",
+				"properties": {
+					"geoCircle": {
+						"$ref": "#/components/schemas/GeoCircle"
+					},
+					"geoPolygon": {
+						"$ref": "#/components/schemas/GeoPolygon"
+					},
+					"destinationId": {
+						"$ref": "#/components/schemas/GeoDestinationId"
+					}
+				},
+				"title": "Representation of an area",
+				"type": "object"
+			},
+			"GeoCircle": {
+				"properties": {
+					"coordinate": {
+						"$ref": "#/components/schemas/GeoCoordinate"
+					},
+					"radius": {
+						"format": "int32",
+						"title": "radius in meter around the center",
+						"type": "integer"
+					}
+				},
+				"title": "Area defined by a circle",
+				"type": "object"
+			},
+			"GeoCoordinate": {
+				"example": {
+					"latitude": 0.8008281904610115,
+					"longitude": 6.027456183070403
+				},
+				"properties": {
+					"latitude": {
+						"format": "double",
+						"type": "number"
+					},
+					"longitude": {
+						"format": "double",
+						"type": "number"
+					}
+				},
+				"required": ["latitude", "longitude"],
+				"title": "Coordinates as latitude; longitude",
+				"type": "object"
+			},
+			"GeoPolygon": {
+				"properties": {
+					"points": {
+						"items": {
+							"$ref": "#/components/schemas/GeoPolygonPoint"
+						},
+						"title": "points of the polygon",
+						"type": "array"
+					}
+				},
+				"title": "Area defined by a set of points",
+				"type": "object"
+			},
+			"GeoPolygonPoint": {
+				"properties": {
+					"coordinate": {
+						"$ref": "#/components/schemas/GeoCoordinate"
+					},
+					"index": {
+						"format": "int32",
+						"title": "index in the polygon",
+						"type": "integer"
+					}
+				},
+				"title": "Point of a GeoPolygon",
+				"type": "object"
+			},
+			"GeoDestinationId": {
+				"properties": {
+					"destinationId": {
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"CommonPax": {
+				"properties": {
+					"age": {
+						"description": "age of the pax at the beginning of the TravelPeriod",
+						"example": 30,
+						"format": "int32",
+						"type": "integer"
+					},
+					"firstName": {
+						"description": "first name of the pax",
+						"example": "Mike",
+						"type": "string"
+					},
+					"lastName": {
+						"description": "last name of the pax",
+						"example": "Riverdance",
+						"type": "string"
+					},
+					"passportNumber": {
+						"description": "passport number of the pax",
+						"example": "C3045654",
+						"type": "string"
+					},
+					"nationality": {
+						"description": "2 letters code of the country (ISO 3166-1 alpha-2)",
+						"example": "DE",
+						"type": "string"
+					},
+					"address": {
+						"$ref": "#/components/schemas/GeoAddress"
+					},
+					"electronicContactDetails": {
+						"$ref": "#/components/schemas/ContactElectronicContactDetails"
+					},
+					"nezasaRefId": {
+						"description": "an optional identifier of the pax used for correlation",
+						"type": "string"
+					},
+					"supplierRefId": {
+						"description": "an optional supplier identifier of the pax",
+						"type": "string"
+					},
+					"isMainContact": {
+						"description": "if this pax is the main contact",
+						"type": "boolean"
+					},
+					"gender": {
+						"$ref": "#/components/schemas/CommonGender"
+					},
+					"birthDate": {
+						"description": "This date is parsed / serialized through DateTimeFormatter.ISO_LOCAL_DATE\n",
+						"example": "1990-01-01",
+						"title": "The birth date of the pax",
+						"type": "string"
+					},
+					"passportExpirationDate": {
+						"description": "Expiration date of the passport",
+						"example": "2030-01-01",
+						"type": "string"
+					},
+					"secondOrAdditionalNames": {
+						"description": "additional names beside first and last names",
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"passportIssuingCountryCode": {
+						"description": "country that issued the passport",
+						"type": "string"
+					},
+					"passengerReduction": {
+						"description": "passenger reduction identifier (half-fare, swiss-pass, student)",
+						"type": "string"
+					},
+					"title": {
+						"$ref": "#/components/schemas/CommonPaxTitle"
+					}
+				},
+				"required": ["age", "birthDate"],
+				"title": "Basic representation of a pax",
+				"type": "object"
+			},
+			"GeoAddress": {
+				"description": "Basic representation of a physical address.",
+				"example": {
+					"country": "Germany",
+					"city": "Littletown",
+					"street": "132, My Street",
+					"countryCode": "DE",
+					"postalCode": "BG23 4YZ",
+					"street2": "street2",
+					"region": "region"
+				},
+				"properties": {
+					"street": {
+						"description": "street address, first line",
+						"example": "132, My Street",
+						"type": "string"
+					},
+					"street2": {
+						"description": "street address, second line if needed",
+						"type": "string"
+					},
+					"city": {
+						"example": "Littletown",
+						"title": "name of the city",
+						"type": "string"
+					},
+					"postalCode": {
+						"example": "BG23 4YZ",
+						"title": "postal code",
+						"type": "string"
+					},
+					"region": {
+						"title": "region / state",
+						"type": "string"
+					},
+					"countryCode": {
+						"description": "2 letters code of the country (ISO 3166-1 alpha-2)",
+						"example": "DE",
+						"type": "string"
+					},
+					"country": {
+						"example": "Germany",
+						"title": "country",
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"ContactElectronicContactDetails": {
+				"description": "Electronic contacts like phone, email, and website",
+				"properties": {
+					"phones": {
+						"items": {
+							"$ref": "#/components/schemas/ContactPhone"
+						},
+						"type": "array"
+					},
+					"email": {
+						"example": "mike.riverdance@example.com",
+						"type": "string"
+					},
+					"website": {
+						"example": "www.example.com",
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"ContactPhone": {
+				"description": "Phone contact like mobile, landline, fax",
+				"example": {
+					"mobile": true,
+					"company": false,
+					"landline": false,
+					"fax": false,
+					"value": "+41 44 123 45 67"
+				},
+				"properties": {
+					"mobile": {
+						"example": true,
+						"type": "boolean"
+					},
+					"landline": {
+						"example": false,
+						"type": "boolean"
+					},
+					"fax": {
+						"example": false,
+						"type": "boolean"
+					},
+					"company": {
+						"example": false,
+						"type": "boolean"
+					},
+					"value": {
+						"example": "+41 44 123 45 67",
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"CommonGender": {
+				"default": "Male",
+				"enum": ["Male", "Female", "Unknown"],
+				"example": "Male",
+				"type": "string"
+			},
+			"CommonPaxTitle": {
+				"description": "- MR: Mister\n- MRS: Mistress or Missus\n- MS: Miss\n- MSTR: Master, typically used for young boys\n- DR: Doctor\n- PROF: Professor\n- REV: Reverend\n- CAPT: Captain\n- SIR: Sir\n- LADY: Lady\n- INF: Infant (0-2 years old)\n- CHD: Child (2-11 years old)",
+				"enum": [
+					"MR",
+					"MRS",
+					"MS",
+					"MSTR",
+					"DR",
+					"PROF",
+					"REV",
+					"CAPT",
+					"SIR",
+					"LADY",
+					"INF",
+					"CHD"
+				],
+				"title": "The title of pax",
+				"type": "string"
+			},
+			"ActivityOfferResponse": {
+				"description": "Generic response providing a list of activity offers.\n\nReturns either a list of activities, or a list of notifications.",
+				"example": {
+					"activities": [
+						{
+							"componentSourceType": "Private",
+							"onRequest": true,
+							"dropOffs": [
+								{
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"name": "name",
+									"id": "id"
+								},
+								{
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"name": "name",
+									"id": "id"
+								}
+							],
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"durationInMinutes": 1,
+							"description": {
+								"keySentence": "Experience the thrill of snorkeling in the Great Barrier Reef",
+								"description": "Immerse yourself in the beauty of the Great Barrier Reef on this guided snorkeling adventure. You'll get a chance to see a wide variety of marine life in their natural habitat.",
+								"meetingPoints": ["Cairns Marina", "Reef Fleet Terminal"],
+								"inclusions": [
+									"Professional snorkeling guide",
+									"Snorkeling gear",
+									"Lunch and refreshments"
+								],
+								"exclusions": ["Hotel pickup and drop-off", "Gratuities"],
+								"requirements": [
+									"Must be able to swim",
+									"Minimum age is 10 years"
+								],
+								"knowBeforeGo": "Be sure to bring a swimsuit, towel, sunscreen, and a sense of adventure."
+							},
+							"netPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"pictures": [
+								{
+									"pictureItem": [
+										{
+											"url": "url"
+										},
+										{
+											"url": "url"
+										}
+									]
+								},
+								{
+									"pictureItem": [
+										{
+											"url": "url"
+										},
+										{
+											"url": "url"
+										}
+									]
+								}
+							],
+							"reference": "reference",
+							"startLocation": {
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"countryCode": "countryCode"
+							},
+							"supportedLanguages": ["de", "de"],
+							"name": "name",
+							"categories": ["Other", "Other"],
+							"pickUps": [
+								{
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"name": "name",
+									"id": "id"
+								},
+								{
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"name": "name",
+									"id": "id"
+								}
+							],
+							"endLocation": {
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"countryCode": "countryCode"
+							},
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "startDatetime",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 5,
+										"endDatetime": "endDatetime"
+									},
+									{
+										"startDatetime": "startDatetime",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 5,
+										"endDatetime": "endDatetime"
+									}
+								],
+								"cancellationType": "Unknown"
+							},
+							"serviceCategories": [
+								{
+									"period": {
+										"endDate": "2023-08-14",
+										"nights": 1,
+										"startTime": "12:00:00",
+										"endTime": "16:00:00",
+										"startDate": "2024-08-01"
+									},
+									"dropOffType": null,
+									"pickUpType": "Unavailable",
+									"subName": "subName",
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"name": "name",
+									"netPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"id": "id",
+									"cancellationPolicy": {
+										"rules": [
+											{
+												"startDatetime": "startDatetime",
+												"amount": {
+													"currency": "EUR",
+													"value": "230.2"
+												},
+												"percentage": 5,
+												"endDatetime": "endDatetime"
+											},
+											{
+												"startDatetime": "startDatetime",
+												"amount": {
+													"currency": "EUR",
+													"value": "230.2"
+												},
+												"percentage": 5,
+												"endDatetime": "endDatetime"
+											}
+										],
+										"cancellationType": "Unknown"
+									}
+								},
+								{
+									"period": {
+										"endDate": "2023-08-14",
+										"nights": 1,
+										"startTime": "12:00:00",
+										"endTime": "16:00:00",
+										"startDate": "2024-08-01"
+									},
+									"dropOffType": null,
+									"pickUpType": "Unavailable",
+									"subName": "subName",
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"name": "name",
+									"netPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"id": "id",
+									"cancellationPolicy": {
+										"rules": [
+											{
+												"startDatetime": "startDatetime",
+												"amount": {
+													"currency": "EUR",
+													"value": "230.2"
+												},
+												"percentage": 5,
+												"endDatetime": "endDatetime"
+											},
+											{
+												"startDatetime": "startDatetime",
+												"amount": {
+													"currency": "EUR",
+													"value": "230.2"
+												},
+												"percentage": 5,
+												"endDatetime": "endDatetime"
+											}
+										],
+										"cancellationType": "Unknown"
+									}
+								}
+							]
+						},
+						{
+							"componentSourceType": "Private",
+							"onRequest": true,
+							"dropOffs": [
+								{
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"name": "name",
+									"id": "id"
+								},
+								{
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"name": "name",
+									"id": "id"
+								}
+							],
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"durationInMinutes": 1,
+							"description": {
+								"keySentence": "Experience the thrill of snorkeling in the Great Barrier Reef",
+								"description": "Immerse yourself in the beauty of the Great Barrier Reef on this guided snorkeling adventure. You'll get a chance to see a wide variety of marine life in their natural habitat.",
+								"meetingPoints": ["Cairns Marina", "Reef Fleet Terminal"],
+								"inclusions": [
+									"Professional snorkeling guide",
+									"Snorkeling gear",
+									"Lunch and refreshments"
+								],
+								"exclusions": ["Hotel pickup and drop-off", "Gratuities"],
+								"requirements": [
+									"Must be able to swim",
+									"Minimum age is 10 years"
+								],
+								"knowBeforeGo": "Be sure to bring a swimsuit, towel, sunscreen, and a sense of adventure."
+							},
+							"netPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"pictures": [
+								{
+									"pictureItem": [
+										{
+											"url": "url"
+										},
+										{
+											"url": "url"
+										}
+									]
+								},
+								{
+									"pictureItem": [
+										{
+											"url": "url"
+										},
+										{
+											"url": "url"
+										}
+									]
+								}
+							],
+							"reference": "reference",
+							"startLocation": {
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"countryCode": "countryCode"
+							},
+							"supportedLanguages": ["de", "de"],
+							"name": "name",
+							"categories": ["Other", "Other"],
+							"pickUps": [
+								{
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"name": "name",
+									"id": "id"
+								},
+								{
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"name": "name",
+									"id": "id"
+								}
+							],
+							"endLocation": {
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"countryCode": "countryCode"
+							},
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "startDatetime",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 5,
+										"endDatetime": "endDatetime"
+									},
+									{
+										"startDatetime": "startDatetime",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 5,
+										"endDatetime": "endDatetime"
+									}
+								],
+								"cancellationType": "Unknown"
+							},
+							"serviceCategories": [
+								{
+									"period": {
+										"endDate": "2023-08-14",
+										"nights": 1,
+										"startTime": "12:00:00",
+										"endTime": "16:00:00",
+										"startDate": "2024-08-01"
+									},
+									"dropOffType": null,
+									"pickUpType": "Unavailable",
+									"subName": "subName",
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"name": "name",
+									"netPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"id": "id",
+									"cancellationPolicy": {
+										"rules": [
+											{
+												"startDatetime": "startDatetime",
+												"amount": {
+													"currency": "EUR",
+													"value": "230.2"
+												},
+												"percentage": 5,
+												"endDatetime": "endDatetime"
+											},
+											{
+												"startDatetime": "startDatetime",
+												"amount": {
+													"currency": "EUR",
+													"value": "230.2"
+												},
+												"percentage": 5,
+												"endDatetime": "endDatetime"
+											}
+										],
+										"cancellationType": "Unknown"
+									}
+								},
+								{
+									"period": {
+										"endDate": "2023-08-14",
+										"nights": 1,
+										"startTime": "12:00:00",
+										"endTime": "16:00:00",
+										"startDate": "2024-08-01"
+									},
+									"dropOffType": null,
+									"pickUpType": "Unavailable",
+									"subName": "subName",
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"name": "name",
+									"netPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"id": "id",
+									"cancellationPolicy": {
+										"rules": [
+											{
+												"startDatetime": "startDatetime",
+												"amount": {
+													"currency": "EUR",
+													"value": "230.2"
+												},
+												"percentage": 5,
+												"endDatetime": "endDatetime"
+											},
+											{
+												"startDatetime": "startDatetime",
+												"amount": {
+													"currency": "EUR",
+													"value": "230.2"
+												},
+												"percentage": 5,
+												"endDatetime": "endDatetime"
+											}
+										],
+										"cancellationType": "Unknown"
+									}
+								}
+							]
+						}
+					],
+					"paging": {
+						"resultsFrom": 7,
+						"total": 5,
+						"pageSize": 2
+					},
+					"notifications": [
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						},
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						}
+					]
+				},
+				"properties": {
+					"activities": {
+						"items": {
+							"$ref": "#/components/schemas/ActivityOffer"
+						},
+						"title": "list of activity offers",
+						"type": "array"
+					},
+					"paging": {
+						"$ref": "#/components/schemas/CommonPaging"
+					},
+					"notifications": {
+						"items": {
+							"$ref": "#/components/schemas/CommonNotification"
+						},
+						"title": "notifications",
+						"type": "array"
+					}
+				},
+				"required": ["activities"],
+				"type": "object"
+			},
+			"ActivityOfferDetailsResponse": {
+				"description": "Detailed offer response providing an activity offer detail.\n\nReturns either an activity, or a list of notifications.\nIt also returns a list of questions that need to be answered when\ndoing the booking.",
+				"example": {
+					"activity": {
+						"componentSourceType": "Private",
+						"onRequest": true,
+						"dropOffs": [
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							},
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							}
+						],
+						"salesPrice": {
+							"currency": "EUR",
+							"value": "230.2"
+						},
+						"durationInMinutes": 1,
+						"description": {
+							"keySentence": "Experience the thrill of snorkeling in the Great Barrier Reef",
+							"description": "Immerse yourself in the beauty of the Great Barrier Reef on this guided snorkeling adventure. You'll get a chance to see a wide variety of marine life in their natural habitat.",
+							"meetingPoints": ["Cairns Marina", "Reef Fleet Terminal"],
+							"inclusions": [
+								"Professional snorkeling guide",
+								"Snorkeling gear",
+								"Lunch and refreshments"
+							],
+							"exclusions": ["Hotel pickup and drop-off", "Gratuities"],
+							"requirements": [
+								"Must be able to swim",
+								"Minimum age is 10 years"
+							],
+							"knowBeforeGo": "Be sure to bring a swimsuit, towel, sunscreen, and a sense of adventure."
+						},
+						"netPrice": {
+							"currency": "EUR",
+							"value": "230.2"
+						},
+						"pictures": [
+							{
+								"pictureItem": [
+									{
+										"url": "url"
+									},
+									{
+										"url": "url"
+									}
+								]
+							},
+							{
+								"pictureItem": [
+									{
+										"url": "url"
+									},
+									{
+										"url": "url"
+									}
+								]
+							}
+						],
+						"reference": "reference",
+						"startLocation": {
+							"coordinate": {
+								"latitude": 0.8008281904610115,
+								"longitude": 6.027456183070403
+							},
+							"countryCode": "countryCode"
+						},
+						"supportedLanguages": ["de", "de"],
+						"name": "name",
+						"categories": ["Other", "Other"],
+						"pickUps": [
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							},
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							}
+						],
+						"endLocation": {
+							"coordinate": {
+								"latitude": 0.8008281904610115,
+								"longitude": 6.027456183070403
+							},
+							"countryCode": "countryCode"
+						},
+						"cancellationPolicy": {
+							"rules": [
+								{
+									"startDatetime": "startDatetime",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 5,
+									"endDatetime": "endDatetime"
+								},
+								{
+									"startDatetime": "startDatetime",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 5,
+									"endDatetime": "endDatetime"
+								}
+							],
+							"cancellationType": "Unknown"
+						},
+						"serviceCategories": [
+							{
+								"period": {
+									"endDate": "2023-08-14",
+									"nights": 1,
+									"startTime": "12:00:00",
+									"endTime": "16:00:00",
+									"startDate": "2024-08-01"
+								},
+								"dropOffType": null,
+								"pickUpType": "Unavailable",
+								"subName": "subName",
+								"salesPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"name": "name",
+								"netPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"id": "id",
+								"cancellationPolicy": {
+									"rules": [
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										},
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										}
+									],
+									"cancellationType": "Unknown"
+								}
+							},
+							{
+								"period": {
+									"endDate": "2023-08-14",
+									"nights": 1,
+									"startTime": "12:00:00",
+									"endTime": "16:00:00",
+									"startDate": "2024-08-01"
+								},
+								"dropOffType": null,
+								"pickUpType": "Unavailable",
+								"subName": "subName",
+								"salesPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"name": "name",
+								"netPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"id": "id",
+								"cancellationPolicy": {
+									"rules": [
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										},
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										}
+									],
+									"cancellationType": "Unknown"
+								}
+							}
+						]
+					},
+					"questions": [
+						{
+							"question": "question",
+							"id": "id",
+							"placeholder": "placeholder",
+							"required": true,
+							"validation": "String",
+							"answerOptions": [
+								{
+									"answer": "answer",
+									"id": "id"
+								},
+								{
+									"answer": "answer",
+									"id": "id"
+								}
+							]
+						},
+						{
+							"question": "question",
+							"id": "id",
+							"placeholder": "placeholder",
+							"required": true,
+							"validation": "String",
+							"answerOptions": [
+								{
+									"answer": "answer",
+									"id": "id"
+								},
+								{
+									"answer": "answer",
+									"id": "id"
+								}
+							]
+						}
+					],
+					"notifications": [
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						},
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						}
+					]
+				},
+				"properties": {
+					"activity": {
+						"$ref": "#/components/schemas/ActivityOffer"
+					},
+					"notifications": {
+						"items": {
+							"$ref": "#/components/schemas/CommonNotification"
+						},
+						"title": "notifications",
+						"type": "array"
+					},
+					"questions": {
+						"items": {
+							"$ref": "#/components/schemas/ActivityQuestion"
+						},
+						"title": "questions",
+						"type": "array"
+					}
+				},
+				"required": ["activity"],
+				"type": "object"
+			},
+			"AvailabilityAndBookRequest": {
+				"example": {
+					"reference": "reference",
+					"period": {
+						"endDate": "2023-08-14",
+						"nights": 1,
+						"startTime": "12:00:00",
+						"endTime": "16:00:00",
+						"startDate": "2024-08-01"
+					},
+					"serviceCategoryReferences": [
+						"serviceCategoryReferences",
+						"serviceCategoryReferences"
+					],
+					"dropOffId": "dropOffId",
+					"contact": {
+						"firstName": "Mike",
+						"lastName": "Riverdance",
+						"address": {
+							"country": "Germany",
+							"city": "Littletown",
+							"street": "132, My Street",
+							"countryCode": "DE",
+							"postalCode": "BG23 4YZ",
+							"street2": "street2",
+							"region": "region"
+						},
+						"gender": "Male",
+						"electronicContactDetails": {
+							"website": "www.example.com",
+							"phones": [
+								{
+									"mobile": true,
+									"company": false,
+									"landline": false,
+									"fax": false,
+									"value": "+41 44 123 45 67"
+								},
+								{
+									"mobile": true,
+									"company": false,
+									"landline": false,
+									"fax": false,
+									"value": "+41 44 123 45 67"
+								}
+							],
+							"email": "mike.riverdance@example.com"
+						}
+					},
+					"answers": [
+						{
+							"answer": "answer",
+							"id": "id"
+						},
+						{
+							"answer": "answer",
+							"id": "id"
+						}
+					],
+					"currency": "currency",
+					"pickUpId": "pickUpId",
+					"lang": "de",
+					"paxes": [
+						{
+							"passportNumber": "C3045654",
+							"lastName": "Riverdance",
+							"address": {
+								"country": "Germany",
+								"city": "Littletown",
+								"street": "132, My Street",
+								"countryCode": "DE",
+								"postalCode": "BG23 4YZ",
+								"street2": "street2",
+								"region": "region"
+							},
+							"gender": "Male",
+							"supplierRefId": "supplierRefId",
+							"passengerReduction": "passengerReduction",
+							"secondOrAdditionalNames": [
+								"secondOrAdditionalNames",
+								"secondOrAdditionalNames"
+							],
+							"title": "MR",
+							"birthDate": "1990-01-01",
+							"firstName": "Mike",
+							"nezasaRefId": "nezasaRefId",
+							"nationality": "DE",
+							"electronicContactDetails": {
+								"website": "www.example.com",
+								"phones": [
+									{
+										"mobile": true,
+										"company": false,
+										"landline": false,
+										"fax": false,
+										"value": "+41 44 123 45 67"
+									},
+									{
+										"mobile": true,
+										"company": false,
+										"landline": false,
+										"fax": false,
+										"value": "+41 44 123 45 67"
+									}
+								],
+								"email": "mike.riverdance@example.com"
+							},
+							"passportIssuingCountryCode": "passportIssuingCountryCode",
+							"isMainContact": true,
+							"passportExpirationDate": "2030-01-01",
+							"age": 30
+						},
+						{
+							"passportNumber": "C3045654",
+							"lastName": "Riverdance",
+							"address": {
+								"country": "Germany",
+								"city": "Littletown",
+								"street": "132, My Street",
+								"countryCode": "DE",
+								"postalCode": "BG23 4YZ",
+								"street2": "street2",
+								"region": "region"
+							},
+							"gender": "Male",
+							"supplierRefId": "supplierRefId",
+							"passengerReduction": "passengerReduction",
+							"secondOrAdditionalNames": [
+								"secondOrAdditionalNames",
+								"secondOrAdditionalNames"
+							],
+							"title": "MR",
+							"birthDate": "1990-01-01",
+							"firstName": "Mike",
+							"nezasaRefId": "nezasaRefId",
+							"nationality": "DE",
+							"electronicContactDetails": {
+								"website": "www.example.com",
+								"phones": [
+									{
+										"mobile": true,
+										"company": false,
+										"landline": false,
+										"fax": false,
+										"value": "+41 44 123 45 67"
+									},
+									{
+										"mobile": true,
+										"company": false,
+										"landline": false,
+										"fax": false,
+										"value": "+41 44 123 45 67"
+									}
+								],
+								"email": "mike.riverdance@example.com"
+							},
+							"passportIssuingCountryCode": "passportIssuingCountryCode",
+							"isMainContact": true,
+							"passportExpirationDate": "2030-01-01",
+							"age": 30
+						}
+					],
+					"activityLanguage": "activityLanguage"
+				},
+				"properties": {
+					"reference": {
+						"description": "The reference of the offer",
+						"type": "string"
+					},
+					"serviceCategoryReferences": {
+						"description": "The reference(s) of the service category (could represent many tickets for the same activity)",
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"currency": {
+						"description": "Desired currency (3 letter code)",
+						"type": "string"
+					},
+					"paxes": {
+						"description": "Passengers participating in the activity",
+						"items": {
+							"$ref": "#/components/schemas/CommonPax_1"
+						},
+						"type": "array"
+					},
+					"answers": {
+						"description": "Answers to activity questions",
+						"items": {
+							"$ref": "#/components/schemas/ActivityBookingActivityAnswer"
+						},
+						"type": "array"
+					},
+					"lang": {
+						"$ref": "#/components/schemas/Language"
+					},
+					"period": {
+						"$ref": "#/components/schemas/CommonTravelPeriod"
+					},
+					"pickUpId": {
+						"description": "The optional pickUp id",
+						"type": "string"
+					},
+					"dropOffId": {
+						"description": "The optional dropOff id",
+						"type": "string"
+					},
+					"contact": {
+						"$ref": "#/components/schemas/CommonContactDetails"
+					},
+					"activityLanguage": {
+						"description": "Optional value for the language selected of the activity",
+						"type": "string"
+					}
+				},
+				"required": [
+					"currency",
+					"lang",
+					"paxes",
+					"period",
+					"reference",
+					"serviceCategoryReferences"
+				],
+				"type": "object"
+			},
+			"ActivityBookingBookResponse": {
+				"description": "Returns either a booking or a list of notifications.\n\nOptionally a list of \"itemIds\" can be returned. These represent sub-items\nof the booking if the supplier needs them. These will have to be used in\nthe CancellationRequest so that they can be sent to the supplier.",
+				"example": {
+					"vouchersUrls": ["vouchersUrls", "vouchersUrls"],
+					"bookStatus": "Unknown",
+					"itemsIds": ["itemsIds", "itemsIds"],
+					"supplier": "supplier",
+					"bookingId": "bookingId",
+					"notifications": [
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						},
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						}
+					]
+				},
+				"properties": {
+					"bookStatus": {
+						"$ref": "#/components/schemas/ActivityBookingBookStatus"
+					},
+					"bookingId": {
+						"description": "the booking identifier. Used to cancel the booking.",
+						"type": "string"
+					},
+					"itemsIds": {
+						"description": "optional. the sub-items of the booking",
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"supplier": {
+						"description": "name of the activity supplier",
+						"type": "string"
+					},
+					"vouchersUrls": {
+						"description": "vouchers URLs",
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"notifications": {
+						"description": "notifications",
+						"items": {
+							"$ref": "#/components/schemas/CommonNotification"
+						},
+						"type": "array"
+					}
+				},
+				"required": ["bookStatus", "bookingId", "supplier"],
+				"type": "object"
+			},
+			"ActivityBookingCancellationResponse": {
+				"description": "Returns list of notifications in case of error",
+				"example": {
+					"cancellationFee": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"bookingId": "bookingId",
+					"notifications": [
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						},
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						}
+					]
+				},
+				"properties": {
+					"bookingId": {
+						"title": "the booking identifier",
+						"type": "string"
+					},
+					"cancellationFee": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					},
+					"notifications": {
+						"items": {
+							"$ref": "#/components/schemas/CommonNotification"
+						},
+						"title": "notifications",
+						"type": "array"
+					}
+				},
+				"title": "Represents cancellation response",
+				"type": "object"
+			},
+			"ActivityBookingAvailabilityCheckResponse": {
+				"description": "Returns either an availability status and activity offer, or a list of notifications.\nThe returned activity offer can contain an updated price.\nIt might also returns a list of extra questions that need to be answered when doing the booking.",
+				"example": {
+					"offer": {
+						"componentSourceType": "Private",
+						"onRequest": true,
+						"dropOffs": [
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							},
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							}
+						],
+						"salesPrice": {
+							"currency": "EUR",
+							"value": "230.2"
+						},
+						"durationInMinutes": 1,
+						"description": {
+							"keySentence": "Experience the thrill of snorkeling in the Great Barrier Reef",
+							"description": "Immerse yourself in the beauty of the Great Barrier Reef on this guided snorkeling adventure. You'll get a chance to see a wide variety of marine life in their natural habitat.",
+							"meetingPoints": ["Cairns Marina", "Reef Fleet Terminal"],
+							"inclusions": [
+								"Professional snorkeling guide",
+								"Snorkeling gear",
+								"Lunch and refreshments"
+							],
+							"exclusions": ["Hotel pickup and drop-off", "Gratuities"],
+							"requirements": [
+								"Must be able to swim",
+								"Minimum age is 10 years"
+							],
+							"knowBeforeGo": "Be sure to bring a swimsuit, towel, sunscreen, and a sense of adventure."
+						},
+						"netPrice": {
+							"currency": "EUR",
+							"value": "230.2"
+						},
+						"pictures": [
+							{
+								"pictureItem": [
+									{
+										"url": "url"
+									},
+									{
+										"url": "url"
+									}
+								]
+							},
+							{
+								"pictureItem": [
+									{
+										"url": "url"
+									},
+									{
+										"url": "url"
+									}
+								]
+							}
+						],
+						"reference": "reference",
+						"startLocation": {
+							"coordinate": {
+								"latitude": 0.8008281904610115,
+								"longitude": 6.027456183070403
+							},
+							"countryCode": "countryCode"
+						},
+						"supportedLanguages": ["de", "de"],
+						"name": "name",
+						"categories": ["Other", "Other"],
+						"pickUps": [
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							},
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							}
+						],
+						"endLocation": {
+							"coordinate": {
+								"latitude": 0.8008281904610115,
+								"longitude": 6.027456183070403
+							},
+							"countryCode": "countryCode"
+						},
+						"cancellationPolicy": {
+							"rules": [
+								{
+									"startDatetime": "startDatetime",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 5,
+									"endDatetime": "endDatetime"
+								},
+								{
+									"startDatetime": "startDatetime",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 5,
+									"endDatetime": "endDatetime"
+								}
+							],
+							"cancellationType": "Unknown"
+						},
+						"serviceCategories": [
+							{
+								"period": {
+									"endDate": "2023-08-14",
+									"nights": 1,
+									"startTime": "12:00:00",
+									"endTime": "16:00:00",
+									"startDate": "2024-08-01"
+								},
+								"dropOffType": null,
+								"pickUpType": "Unavailable",
+								"subName": "subName",
+								"salesPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"name": "name",
+								"netPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"id": "id",
+								"cancellationPolicy": {
+									"rules": [
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										},
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										}
+									],
+									"cancellationType": "Unknown"
+								}
+							},
+							{
+								"period": {
+									"endDate": "2023-08-14",
+									"nights": 1,
+									"startTime": "12:00:00",
+									"endTime": "16:00:00",
+									"startDate": "2024-08-01"
+								},
+								"dropOffType": null,
+								"pickUpType": "Unavailable",
+								"subName": "subName",
+								"salesPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"name": "name",
+								"netPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"id": "id",
+								"cancellationPolicy": {
+									"rules": [
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										},
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										}
+									],
+									"cancellationType": "Unknown"
+								}
+							}
+						]
+					},
+					"questions": [
+						{
+							"question": "question",
+							"id": "id",
+							"placeholder": "placeholder",
+							"required": true,
+							"validation": "String",
+							"answerOptions": [
+								{
+									"answer": "answer",
+									"id": "id"
+								},
+								{
+									"answer": "answer",
+									"id": "id"
+								}
+							]
+						},
+						{
+							"question": "question",
+							"id": "id",
+							"placeholder": "placeholder",
+							"required": true,
+							"validation": "String",
+							"answerOptions": [
+								{
+									"answer": "answer",
+									"id": "id"
+								},
+								{
+									"answer": "answer",
+									"id": "id"
+								}
+							]
+						}
+					],
+					"availabilityStatus": "Unknown",
+					"notifications": [
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						},
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						}
+					]
+				},
+				"properties": {
+					"availabilityStatus": {
+						"$ref": "#/components/schemas/CommonBookingAvailabilityStatus"
+					},
+					"offer": {
+						"$ref": "#/components/schemas/ActivityOffer"
+					},
+					"questions": {
+						"items": {
+							"$ref": "#/components/schemas/ActivityQuestion"
+						},
+						"title": "questions",
+						"type": "array"
+					},
+					"notifications": {
+						"items": {
+							"$ref": "#/components/schemas/CommonNotification"
+						},
+						"title": "notifications",
+						"type": "array"
+					}
+				},
+				"required": ["availabilityStatus"],
+				"title": "Represents pre-booking availability check response",
+				"type": "object"
+			},
+			"ActivityBookingGetBookingResponse": {
+				"example": {
+					"activities": [
+						{
+							"activityId": "activityId",
+							"title": "title",
+							"bookingId": "bookingId"
+						},
+						{
+							"activityId": "activityId",
+							"title": "title",
+							"bookingId": "bookingId"
+						}
+					],
+					"notifications": [
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						},
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						}
+					]
+				},
+				"properties": {
+					"activities": {
+						"description": "A list of booked activities ready to be pulled.",
+						"items": {
+							"$ref": "#/components/schemas/ActivityBookingGetBookingResponseActivity"
+						},
+						"type": "array"
+					},
+					"notifications": {
+						"items": {
+							"$ref": "#/components/schemas/CommonNotification"
+						},
+						"type": "array"
+					}
+				},
+				"required": ["activities"],
+				"type": "object"
+			},
+			"ActivityBookingGetBookingResponseActivity": {
+				"example": {
+					"activityId": "activityId",
+					"title": "title",
+					"bookingId": "bookingId"
+				},
+				"properties": {
+					"bookingId": {
+						"description": "ID of the booking this activity belongs to.",
+						"type": "string"
+					},
+					"activityId": {
+						"description": "Specific ID of the activity in the booking.",
+						"type": "string"
+					},
+					"title": {
+						"description": "Human readable title.",
+						"type": "string"
+					}
+				},
+				"required": ["activityId", "bookingId", "title"],
+				"type": "object"
+			},
+			"ActivityBookingGetBookingDetailsResponse": {
+				"example": {
+					"details": [
+						{
+							"offer": {
+								"componentSourceType": "Private",
+								"onRequest": true,
+								"dropOffs": [
+									{
+										"coordinate": {
+											"latitude": 0.8008281904610115,
+											"longitude": 6.027456183070403
+										},
+										"name": "name",
+										"id": "id"
+									},
+									{
+										"coordinate": {
+											"latitude": 0.8008281904610115,
+											"longitude": 6.027456183070403
+										},
+										"name": "name",
+										"id": "id"
+									}
+								],
+								"salesPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"durationInMinutes": 1,
+								"description": {
+									"keySentence": "Experience the thrill of snorkeling in the Great Barrier Reef",
+									"description": "Immerse yourself in the beauty of the Great Barrier Reef on this guided snorkeling adventure. You'll get a chance to see a wide variety of marine life in their natural habitat.",
+									"meetingPoints": ["Cairns Marina", "Reef Fleet Terminal"],
+									"inclusions": [
+										"Professional snorkeling guide",
+										"Snorkeling gear",
+										"Lunch and refreshments"
+									],
+									"exclusions": ["Hotel pickup and drop-off", "Gratuities"],
+									"requirements": [
+										"Must be able to swim",
+										"Minimum age is 10 years"
+									],
+									"knowBeforeGo": "Be sure to bring a swimsuit, towel, sunscreen, and a sense of adventure."
+								},
+								"netPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"pictures": [
+									{
+										"pictureItem": [
+											{
+												"url": "url"
+											},
+											{
+												"url": "url"
+											}
+										]
+									},
+									{
+										"pictureItem": [
+											{
+												"url": "url"
+											},
+											{
+												"url": "url"
+											}
+										]
+									}
+								],
+								"reference": "reference",
+								"startLocation": {
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"countryCode": "countryCode"
+								},
+								"supportedLanguages": ["de", "de"],
+								"name": "name",
+								"categories": ["Other", "Other"],
+								"pickUps": [
+									{
+										"coordinate": {
+											"latitude": 0.8008281904610115,
+											"longitude": 6.027456183070403
+										},
+										"name": "name",
+										"id": "id"
+									},
+									{
+										"coordinate": {
+											"latitude": 0.8008281904610115,
+											"longitude": 6.027456183070403
+										},
+										"name": "name",
+										"id": "id"
+									}
+								],
+								"endLocation": {
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"countryCode": "countryCode"
+								},
+								"cancellationPolicy": {
+									"rules": [
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										},
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										}
+									],
+									"cancellationType": "Unknown"
+								},
+								"serviceCategories": [
+									{
+										"period": {
+											"endDate": "2023-08-14",
+											"nights": 1,
+											"startTime": "12:00:00",
+											"endTime": "16:00:00",
+											"startDate": "2024-08-01"
+										},
+										"dropOffType": null,
+										"pickUpType": "Unavailable",
+										"subName": "subName",
+										"salesPrice": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"name": "name",
+										"netPrice": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"id": "id",
+										"cancellationPolicy": {
+											"rules": [
+												{
+													"startDatetime": "startDatetime",
+													"amount": {
+														"currency": "EUR",
+														"value": "230.2"
+													},
+													"percentage": 5,
+													"endDatetime": "endDatetime"
+												},
+												{
+													"startDatetime": "startDatetime",
+													"amount": {
+														"currency": "EUR",
+														"value": "230.2"
+													},
+													"percentage": 5,
+													"endDatetime": "endDatetime"
+												}
+											],
+											"cancellationType": "Unknown"
+										}
+									},
+									{
+										"period": {
+											"endDate": "2023-08-14",
+											"nights": 1,
+											"startTime": "12:00:00",
+											"endTime": "16:00:00",
+											"startDate": "2024-08-01"
+										},
+										"dropOffType": null,
+										"pickUpType": "Unavailable",
+										"subName": "subName",
+										"salesPrice": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"name": "name",
+										"netPrice": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"id": "id",
+										"cancellationPolicy": {
+											"rules": [
+												{
+													"startDatetime": "startDatetime",
+													"amount": {
+														"currency": "EUR",
+														"value": "230.2"
+													},
+													"percentage": 5,
+													"endDatetime": "endDatetime"
+												},
+												{
+													"startDatetime": "startDatetime",
+													"amount": {
+														"currency": "EUR",
+														"value": "230.2"
+													},
+													"percentage": 5,
+													"endDatetime": "endDatetime"
+												}
+											],
+											"cancellationType": "Unknown"
+										}
+									}
+								]
+							},
+							"bookStatus": "Unknown"
+						},
+						{
+							"offer": {
+								"componentSourceType": "Private",
+								"onRequest": true,
+								"dropOffs": [
+									{
+										"coordinate": {
+											"latitude": 0.8008281904610115,
+											"longitude": 6.027456183070403
+										},
+										"name": "name",
+										"id": "id"
+									},
+									{
+										"coordinate": {
+											"latitude": 0.8008281904610115,
+											"longitude": 6.027456183070403
+										},
+										"name": "name",
+										"id": "id"
+									}
+								],
+								"salesPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"durationInMinutes": 1,
+								"description": {
+									"keySentence": "Experience the thrill of snorkeling in the Great Barrier Reef",
+									"description": "Immerse yourself in the beauty of the Great Barrier Reef on this guided snorkeling adventure. You'll get a chance to see a wide variety of marine life in their natural habitat.",
+									"meetingPoints": ["Cairns Marina", "Reef Fleet Terminal"],
+									"inclusions": [
+										"Professional snorkeling guide",
+										"Snorkeling gear",
+										"Lunch and refreshments"
+									],
+									"exclusions": ["Hotel pickup and drop-off", "Gratuities"],
+									"requirements": [
+										"Must be able to swim",
+										"Minimum age is 10 years"
+									],
+									"knowBeforeGo": "Be sure to bring a swimsuit, towel, sunscreen, and a sense of adventure."
+								},
+								"netPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"pictures": [
+									{
+										"pictureItem": [
+											{
+												"url": "url"
+											},
+											{
+												"url": "url"
+											}
+										]
+									},
+									{
+										"pictureItem": [
+											{
+												"url": "url"
+											},
+											{
+												"url": "url"
+											}
+										]
+									}
+								],
+								"reference": "reference",
+								"startLocation": {
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"countryCode": "countryCode"
+								},
+								"supportedLanguages": ["de", "de"],
+								"name": "name",
+								"categories": ["Other", "Other"],
+								"pickUps": [
+									{
+										"coordinate": {
+											"latitude": 0.8008281904610115,
+											"longitude": 6.027456183070403
+										},
+										"name": "name",
+										"id": "id"
+									},
+									{
+										"coordinate": {
+											"latitude": 0.8008281904610115,
+											"longitude": 6.027456183070403
+										},
+										"name": "name",
+										"id": "id"
+									}
+								],
+								"endLocation": {
+									"coordinate": {
+										"latitude": 0.8008281904610115,
+										"longitude": 6.027456183070403
+									},
+									"countryCode": "countryCode"
+								},
+								"cancellationPolicy": {
+									"rules": [
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										},
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										}
+									],
+									"cancellationType": "Unknown"
+								},
+								"serviceCategories": [
+									{
+										"period": {
+											"endDate": "2023-08-14",
+											"nights": 1,
+											"startTime": "12:00:00",
+											"endTime": "16:00:00",
+											"startDate": "2024-08-01"
+										},
+										"dropOffType": null,
+										"pickUpType": "Unavailable",
+										"subName": "subName",
+										"salesPrice": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"name": "name",
+										"netPrice": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"id": "id",
+										"cancellationPolicy": {
+											"rules": [
+												{
+													"startDatetime": "startDatetime",
+													"amount": {
+														"currency": "EUR",
+														"value": "230.2"
+													},
+													"percentage": 5,
+													"endDatetime": "endDatetime"
+												},
+												{
+													"startDatetime": "startDatetime",
+													"amount": {
+														"currency": "EUR",
+														"value": "230.2"
+													},
+													"percentage": 5,
+													"endDatetime": "endDatetime"
+												}
+											],
+											"cancellationType": "Unknown"
+										}
+									},
+									{
+										"period": {
+											"endDate": "2023-08-14",
+											"nights": 1,
+											"startTime": "12:00:00",
+											"endTime": "16:00:00",
+											"startDate": "2024-08-01"
+										},
+										"dropOffType": null,
+										"pickUpType": "Unavailable",
+										"subName": "subName",
+										"salesPrice": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"name": "name",
+										"netPrice": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"id": "id",
+										"cancellationPolicy": {
+											"rules": [
+												{
+													"startDatetime": "startDatetime",
+													"amount": {
+														"currency": "EUR",
+														"value": "230.2"
+													},
+													"percentage": 5,
+													"endDatetime": "endDatetime"
+												},
+												{
+													"startDatetime": "startDatetime",
+													"amount": {
+														"currency": "EUR",
+														"value": "230.2"
+													},
+													"percentage": 5,
+													"endDatetime": "endDatetime"
+												}
+											],
+											"cancellationType": "Unknown"
+										}
+									}
+								]
+							},
+							"bookStatus": "Unknown"
+						}
+					],
+					"notifications": [
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						},
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						}
+					]
+				},
+				"properties": {
+					"details": {
+						"items": {
+							"$ref": "#/components/schemas/GetBookingDetailsResponseActivityDetails"
+						},
+						"type": "array"
+					},
+					"notifications": {
+						"items": {
+							"$ref": "#/components/schemas/CommonNotification"
+						},
+						"type": "array"
+					}
+				},
+				"required": ["details"],
+				"type": "object"
+			},
+			"GetBookingDetailsResponseActivityDetails": {
+				"example": {
+					"offer": {
+						"componentSourceType": "Private",
+						"onRequest": true,
+						"dropOffs": [
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							},
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							}
+						],
+						"salesPrice": {
+							"currency": "EUR",
+							"value": "230.2"
+						},
+						"durationInMinutes": 1,
+						"description": {
+							"keySentence": "Experience the thrill of snorkeling in the Great Barrier Reef",
+							"description": "Immerse yourself in the beauty of the Great Barrier Reef on this guided snorkeling adventure. You'll get a chance to see a wide variety of marine life in their natural habitat.",
+							"meetingPoints": ["Cairns Marina", "Reef Fleet Terminal"],
+							"inclusions": [
+								"Professional snorkeling guide",
+								"Snorkeling gear",
+								"Lunch and refreshments"
+							],
+							"exclusions": ["Hotel pickup and drop-off", "Gratuities"],
+							"requirements": [
+								"Must be able to swim",
+								"Minimum age is 10 years"
+							],
+							"knowBeforeGo": "Be sure to bring a swimsuit, towel, sunscreen, and a sense of adventure."
+						},
+						"netPrice": {
+							"currency": "EUR",
+							"value": "230.2"
+						},
+						"pictures": [
+							{
+								"pictureItem": [
+									{
+										"url": "url"
+									},
+									{
+										"url": "url"
+									}
+								]
+							},
+							{
+								"pictureItem": [
+									{
+										"url": "url"
+									},
+									{
+										"url": "url"
+									}
+								]
+							}
+						],
+						"reference": "reference",
+						"startLocation": {
+							"coordinate": {
+								"latitude": 0.8008281904610115,
+								"longitude": 6.027456183070403
+							},
+							"countryCode": "countryCode"
+						},
+						"supportedLanguages": ["de", "de"],
+						"name": "name",
+						"categories": ["Other", "Other"],
+						"pickUps": [
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							},
+							{
+								"coordinate": {
+									"latitude": 0.8008281904610115,
+									"longitude": 6.027456183070403
+								},
+								"name": "name",
+								"id": "id"
+							}
+						],
+						"endLocation": {
+							"coordinate": {
+								"latitude": 0.8008281904610115,
+								"longitude": 6.027456183070403
+							},
+							"countryCode": "countryCode"
+						},
+						"cancellationPolicy": {
+							"rules": [
+								{
+									"startDatetime": "startDatetime",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 5,
+									"endDatetime": "endDatetime"
+								},
+								{
+									"startDatetime": "startDatetime",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 5,
+									"endDatetime": "endDatetime"
+								}
+							],
+							"cancellationType": "Unknown"
+						},
+						"serviceCategories": [
+							{
+								"period": {
+									"endDate": "2023-08-14",
+									"nights": 1,
+									"startTime": "12:00:00",
+									"endTime": "16:00:00",
+									"startDate": "2024-08-01"
+								},
+								"dropOffType": null,
+								"pickUpType": "Unavailable",
+								"subName": "subName",
+								"salesPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"name": "name",
+								"netPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"id": "id",
+								"cancellationPolicy": {
+									"rules": [
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										},
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										}
+									],
+									"cancellationType": "Unknown"
+								}
+							},
+							{
+								"period": {
+									"endDate": "2023-08-14",
+									"nights": 1,
+									"startTime": "12:00:00",
+									"endTime": "16:00:00",
+									"startDate": "2024-08-01"
+								},
+								"dropOffType": null,
+								"pickUpType": "Unavailable",
+								"subName": "subName",
+								"salesPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"name": "name",
+								"netPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"id": "id",
+								"cancellationPolicy": {
+									"rules": [
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										},
+										{
+											"startDatetime": "startDatetime",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 5,
+											"endDatetime": "endDatetime"
+										}
+									],
+									"cancellationType": "Unknown"
+								}
+							}
+						]
+					},
+					"bookStatus": "Unknown"
+				},
+				"properties": {
+					"offer": {
+						"$ref": "#/components/schemas/ActivityOffer"
+					},
+					"bookStatus": {
+						"$ref": "#/components/schemas/ActivityBookingBookStatus"
+					}
+				},
+				"required": ["bookStatus", "offer"],
+				"type": "object"
+			},
+			"ActivityOffer": {
+				"description": "Representation of a activity offer.\nThe `reference` is the activity offer identifier and should be as stable as possible (i.e two identical request should return offers with the same references).\nFurthermore the reference should be also valid until the activity takes place, so that a book can be made a long time after the planning was done.",
+				"example": {
+					"componentSourceType": "Private",
+					"onRequest": true,
+					"dropOffs": [
+						{
+							"coordinate": {
+								"latitude": 0.8008281904610115,
+								"longitude": 6.027456183070403
+							},
+							"name": "name",
+							"id": "id"
+						},
+						{
+							"coordinate": {
+								"latitude": 0.8008281904610115,
+								"longitude": 6.027456183070403
+							},
+							"name": "name",
+							"id": "id"
+						}
+					],
+					"salesPrice": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"durationInMinutes": 1,
+					"description": {
+						"keySentence": "Experience the thrill of snorkeling in the Great Barrier Reef",
+						"description": "Immerse yourself in the beauty of the Great Barrier Reef on this guided snorkeling adventure. You'll get a chance to see a wide variety of marine life in their natural habitat.",
+						"meetingPoints": ["Cairns Marina", "Reef Fleet Terminal"],
+						"inclusions": [
+							"Professional snorkeling guide",
+							"Snorkeling gear",
+							"Lunch and refreshments"
+						],
+						"exclusions": ["Hotel pickup and drop-off", "Gratuities"],
+						"requirements": ["Must be able to swim", "Minimum age is 10 years"],
+						"knowBeforeGo": "Be sure to bring a swimsuit, towel, sunscreen, and a sense of adventure."
+					},
+					"netPrice": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"pictures": [
+						{
+							"pictureItem": [
+								{
+									"url": "url"
+								},
+								{
+									"url": "url"
+								}
+							]
+						},
+						{
+							"pictureItem": [
+								{
+									"url": "url"
+								},
+								{
+									"url": "url"
+								}
+							]
+						}
+					],
+					"reference": "reference",
+					"startLocation": {
+						"coordinate": {
+							"latitude": 0.8008281904610115,
+							"longitude": 6.027456183070403
+						},
+						"countryCode": "countryCode"
+					},
+					"supportedLanguages": ["de", "de"],
+					"name": "name",
+					"categories": ["Other", "Other"],
+					"pickUps": [
+						{
+							"coordinate": {
+								"latitude": 0.8008281904610115,
+								"longitude": 6.027456183070403
+							},
+							"name": "name",
+							"id": "id"
+						},
+						{
+							"coordinate": {
+								"latitude": 0.8008281904610115,
+								"longitude": 6.027456183070403
+							},
+							"name": "name",
+							"id": "id"
+						}
+					],
+					"endLocation": {
+						"coordinate": {
+							"latitude": 0.8008281904610115,
+							"longitude": 6.027456183070403
+						},
+						"countryCode": "countryCode"
+					},
+					"cancellationPolicy": {
+						"rules": [
+							{
+								"startDatetime": "startDatetime",
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"percentage": 5,
+								"endDatetime": "endDatetime"
+							},
+							{
+								"startDatetime": "startDatetime",
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"percentage": 5,
+								"endDatetime": "endDatetime"
+							}
+						],
+						"cancellationType": "Unknown"
+					},
+					"serviceCategories": [
+						{
+							"period": {
+								"endDate": "2023-08-14",
+								"nights": 1,
+								"startTime": "12:00:00",
+								"endTime": "16:00:00",
+								"startDate": "2024-08-01"
+							},
+							"dropOffType": null,
+							"pickUpType": "Unavailable",
+							"subName": "subName",
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"name": "name",
+							"netPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"id": "id",
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "startDatetime",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 5,
+										"endDatetime": "endDatetime"
+									},
+									{
+										"startDatetime": "startDatetime",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 5,
+										"endDatetime": "endDatetime"
+									}
+								],
+								"cancellationType": "Unknown"
+							}
+						},
+						{
+							"period": {
+								"endDate": "2023-08-14",
+								"nights": 1,
+								"startTime": "12:00:00",
+								"endTime": "16:00:00",
+								"startDate": "2024-08-01"
+							},
+							"dropOffType": null,
+							"pickUpType": "Unavailable",
+							"subName": "subName",
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"name": "name",
+							"netPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"id": "id",
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "startDatetime",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 5,
+										"endDatetime": "endDatetime"
+									},
+									{
+										"startDatetime": "startDatetime",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 5,
+										"endDatetime": "endDatetime"
+									}
+								],
+								"cancellationType": "Unknown"
+							}
+						}
+					]
+				},
+				"properties": {
+					"reference": {
+						"description": "The reference of the offer",
+						"type": "string"
+					},
+					"name": {
+						"description": "The title of the activity",
+						"type": "string"
+					},
+					"description": {
+						"$ref": "#/components/schemas/ActivityDescriptions"
+					},
+					"startLocation": {
+						"$ref": "#/components/schemas/ActivityLocation"
+					},
+					"endLocation": {
+						"$ref": "#/components/schemas/ActivityLocation"
+					},
+					"durationInMinutes": {
+						"description": "The possible duration of the activity in minutes. Empty if the activity is not limited in duration.",
+						"format": "int32",
+						"type": "integer"
+					},
+					"categories": {
+						"description": "The category of the activity. See `ActivityCategory` for the possible values.",
+						"items": {
+							"$ref": "#/components/schemas/ActivityCategory"
+						},
+						"type": "array"
+					},
+					"pictures": {
+						"description": "The pictures of the activity",
+						"items": {
+							"$ref": "#/components/schemas/ActivityPicture"
+						},
+						"type": "array"
+					},
+					"salesPrice": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					},
+					"netPrice": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					},
+					"onRequest": {
+						"description": "If the booking is on request",
+						"type": "boolean"
+					},
+					"componentSourceType": {
+						"$ref": "#/components/schemas/NezasaComponentSourceType"
+					},
+					"cancellationPolicy": {
+						"$ref": "#/components/schemas/ActivityCancellationPolicy"
+					},
+					"serviceCategories": {
+						"description": "All the serviceCategories about the activity",
+						"items": {
+							"$ref": "#/components/schemas/ActivityServiceCategory"
+						},
+						"type": "array"
+					},
+					"supportedLanguages": {
+						"description": "The breakdown of supported languages by the activity event (on site).",
+						"items": {
+							"$ref": "#/components/schemas/Language"
+						},
+						"type": "array"
+					},
+					"pickUps": {
+						"description": "The available list of pick-up points for this activity",
+						"items": {
+							"$ref": "#/components/schemas/PickUpDropOff"
+						},
+						"type": "array"
+					},
+					"dropOffs": {
+						"description": "The available list of drop-off points for this activity",
+						"items": {
+							"$ref": "#/components/schemas/PickUpDropOff"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"cancellationPolicy",
+					"categories",
+					"componentSourceType",
+					"description",
+					"endLocation",
+					"name",
+					"onRequest",
+					"pictures",
+					"reference",
+					"salesPrice",
+					"serviceCategories",
+					"startLocation"
+				],
+				"type": "object"
+			},
+			"ActivityDescriptions": {
+				"example": {
+					"keySentence": "Experience the thrill of snorkeling in the Great Barrier Reef",
+					"description": "Immerse yourself in the beauty of the Great Barrier Reef on this guided snorkeling adventure. You'll get a chance to see a wide variety of marine life in their natural habitat.",
+					"meetingPoints": ["Cairns Marina", "Reef Fleet Terminal"],
+					"inclusions": [
+						"Professional snorkeling guide",
+						"Snorkeling gear",
+						"Lunch and refreshments"
+					],
+					"exclusions": ["Hotel pickup and drop-off", "Gratuities"],
+					"requirements": ["Must be able to swim", "Minimum age is 10 years"],
+					"knowBeforeGo": "Be sure to bring a swimsuit, towel, sunscreen, and a sense of adventure."
+				},
+				"properties": {
+					"keySentence": {
+						"type": "string"
+					},
+					"description": {
+						"description": "Description of the activity. Supports basic HTML.",
+						"type": "string"
+					},
+					"meetingPoints": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"inclusions": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"exclusions": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"requirements": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"knowBeforeGo": {
+						"type": "string"
+					},
+					"otherSections": {
+						"items": {
+							"$ref": "#/components/schemas/ActivityDescriptions_otherSections_inner"
+						},
+						"type": "array"
+					}
+				},
+				"required": ["description", "keySentence"],
+				"title": "Descriptions for the activity",
+				"type": "object"
+			},
+			"ActivityLocation": {
+				"example": {
+					"coordinate": {
+						"latitude": 0.8008281904610115,
+						"longitude": 6.027456183070403
+					},
+					"countryCode": "countryCode"
+				},
+				"properties": {
+					"coordinate": {
+						"$ref": "#/components/schemas/GeoCoordinate"
+					},
+					"countryCode": {
+						"title": "the country code of the activity",
+						"type": "string"
+					}
+				},
+				"required": ["coordinate", "countryCode"],
+				"title": "Describes an activity location",
+				"type": "object"
+			},
+			"ActivityCategory": {
+				"default": "Other",
+				"enum": [
+					"Other",
+					"CityAndShopping",
+					"ThemeParks",
+					"TicketsAndSightSeeingPasses",
+					"ArtsAndCulture",
+					"EntertainmentAndSportEvents",
+					"GastronomyAndNightlife",
+					"OutdoorActivitiesAndSports",
+					"DayTripsAndExcursions",
+					"NatureAndWildlife",
+					"SpaAndWellness",
+					"Transportation",
+					"AerialTours",
+					"BoatTours",
+					"Classes",
+					"ForFamilies",
+					"ForCouples",
+					"ForSeniors"
+				],
+				"type": "string"
+			},
+			"ActivityPicture": {
+				"example": {
+					"pictureItem": [
+						{
+							"url": "url"
+						},
+						{
+							"url": "url"
+						}
+					]
+				},
+				"properties": {
+					"pictureItem": {
+						"description": "the picture renditions associated with this picture",
+						"items": {
+							"$ref": "#/components/schemas/ActivityPictureItem"
+						},
+						"type": "array"
+					}
+				},
+				"title": "A picture",
+				"type": "object"
+			},
+			"ActivityPictureItem": {
+				"description": "A picture item is a picture and describes metadata information of an image file.",
+				"example": {
+					"url": "url"
+				},
+				"properties": {
+					"url": {
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"ActivityCancellationPolicy": {
+				"description": "Base the cancellation calculation on the period->startDate.\nFor instance, if an activity incurs a cancellation fee starting 24\nhours before the period->startDate date, then determine the applicable\ncancellation fee using the formula: period->startDate minus 24 hours.",
+				"example": {
+					"rules": [
+						{
+							"startDatetime": "startDatetime",
+							"amount": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"percentage": 5,
+							"endDatetime": "endDatetime"
+						},
+						{
+							"startDatetime": "startDatetime",
+							"amount": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"percentage": 5,
+							"endDatetime": "endDatetime"
+						}
+					],
+					"cancellationType": "Unknown"
+				},
+				"properties": {
+					"cancellationType": {
+						"$ref": "#/components/schemas/CommonCancellationPolicy"
+					},
+					"rules": {
+						"items": {
+							"$ref": "#/components/schemas/ActivityCancellationPolicyRule"
+						},
+						"type": "array"
+					}
+				},
+				"required": ["cancellationType", "rules"],
+				"title": "The cancellation policy of the activity huhu.",
+				"type": "object"
+			},
+			"ActivityCancellationPolicyRule": {
+				"description": "A cancellation policy rule. startDatetime and endDatetime define an interval (can be open ended) where this rule applies.",
+				"example": {
+					"startDatetime": "startDatetime",
+					"amount": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"percentage": 5,
+					"endDatetime": "endDatetime"
+				},
+				"properties": {
+					"amount": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					},
+					"percentage": {
+						"format": "int64",
+						"title": "a percentage of the booking",
+						"type": "integer"
+					},
+					"startDatetime": {
+						"description": "The start date time of the cancellation policy rule in ISO8601 format (yyyy-MM-ddTHH:mm:ss.SSS)",
+						"type": "string"
+					},
+					"endDatetime": {
+						"description": "The end date time of the cancellation policy rule in ISO8601 format (yyyy-MM-ddTHH:mm:ss.SSS).",
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"ActivityServiceCategory": {
+				"description": "A Service Category describes variations of an activity, usually also with a\nvariation in price (think normal ticket vs VIP ticket),\nschedule (normal activity starts at 9AM, VIP activity starts at 10AM).\n\nYou can also represent a more complex hierarchy using name and sub_name\n(e.g. 1 -> name = adult, sub_name = half day; 2 -> name = adult,\nsub_name = full day; 3 -> name = child, sub_name = full day)\n\nThe netPrice is required, the salesPrice is optional. If ommitted,\nadditional price calculations may be applied. Otherwise, the sales\nprice will be used unchanged.",
+				"example": {
+					"period": {
+						"endDate": "2023-08-14",
+						"nights": 1,
+						"startTime": "12:00:00",
+						"endTime": "16:00:00",
+						"startDate": "2024-08-01"
+					},
+					"dropOffType": null,
+					"pickUpType": "Unavailable",
+					"subName": "subName",
+					"salesPrice": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"name": "name",
+					"netPrice": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"id": "id",
+					"cancellationPolicy": {
+						"rules": [
+							{
+								"startDatetime": "startDatetime",
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"percentage": 5,
+								"endDatetime": "endDatetime"
+							},
+							{
+								"startDatetime": "startDatetime",
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"percentage": 5,
+								"endDatetime": "endDatetime"
+							}
+						],
+						"cancellationType": "Unknown"
+					}
+				},
+				"properties": {
+					"id": {
+						"description": "the identifier/reference of this service category",
+						"type": "string"
+					},
+					"name": {
+						"description": "the name of this service category",
+						"type": "string"
+					},
+					"period": {
+						"$ref": "#/components/schemas/CommonTravelPeriod"
+					},
+					"pickUpType": {
+						"$ref": "#/components/schemas/ActivityPickUpDropOffType"
+					},
+					"dropOffType": {
+						"$ref": "#/components/schemas/ActivityPickUpDropOffType"
+					},
+					"cancellationPolicy": {
+						"$ref": "#/components/schemas/ActivityCancellationPolicy"
+					},
+					"subName": {
+						"title": "optional subName of the service category",
+						"type": "string"
+					},
+					"salesPrice": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					},
+					"netPrice": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					}
+				},
+				"required": [
+					"cancellationPolicy",
+					"dropOffType",
+					"id",
+					"period",
+					"pickUpType",
+					"salesPrice"
+				],
+				"type": "object"
+			},
+			"ActivityPickUpDropOffType": {
+				"default": "Unavailable",
+				"description": "- Unavailable: no pickup/dropoff is available\n- Optional: pickup/dropoff is optional\n- Required: pickup/dropoff is required. See method GetActivitiesOfferPickUpsDropOffs",
+				"enum": ["Unavailable", "Optional", "Required"],
+				"title": "The type of pickup/dropoff information",
+				"type": "string"
+			},
+			"PickUpDropOff": {
+				"example": {
+					"coordinate": {
+						"latitude": 0.8008281904610115,
+						"longitude": 6.027456183070403
+					},
+					"name": "name",
+					"id": "id"
+				},
+				"properties": {
+					"id": {
+						"description": "The id of the question. will be used to correlate it to an answer",
+						"type": "string"
+					},
+					"name": {
+						"description": "The id of the question. will be used to correlate it to an answer",
+						"type": "string"
+					},
+					"coordinate": {
+						"$ref": "#/components/schemas/GeoCoordinate"
+					}
+				},
+				"required": ["id", "name"],
+				"title": "Describes the pick up or drop off point of an activity",
+				"type": "object"
+			},
+			"CommonNotification": {
+				"example": {
+					"notificationLevel": "Info",
+					"description": "description",
+					"notificationType": "InputValidation"
+				},
+				"properties": {
+					"notificationLevel": {
+						"$ref": "#/components/schemas/CommonNotificationLevel"
+					},
+					"notificationType": {
+						"$ref": "#/components/schemas/CommonNotificationType"
+					},
+					"description": {
+						"description": "Description of the notification",
+						"type": "string"
+					}
+				},
+				"title": "Business notifications",
+				"type": "object"
+			},
+			"CommonNotificationLevel": {
+				"default": "Info",
+				"enum": ["Info", "Warning", "Error"],
+				"title": "Level of the notification",
+				"type": "string"
+			},
+			"CommonNotificationType": {
+				"default": "InputValidation",
+				"enum": ["InputValidation", "Business", "Remarks", "SupplierSystem"],
+				"title": "Type of the notification",
+				"type": "string"
+			},
+			"ActivityQuestion": {
+				"example": {
+					"question": "question",
+					"id": "id",
+					"placeholder": "placeholder",
+					"required": true,
+					"validation": "String",
+					"answerOptions": [
+						{
+							"answer": "answer",
+							"id": "id"
+						},
+						{
+							"answer": "answer",
+							"id": "id"
+						}
+					]
+				},
+				"properties": {
+					"id": {
+						"description": "The id of the question. will be used to correlate it to an answer",
+						"type": "string"
+					},
+					"question": {
+						"description": "The question to be presented",
+						"type": "string"
+					},
+					"required": {
+						"description": "If an answer to the question is necessary",
+						"type": "boolean"
+					},
+					"placeholder": {
+						"type": "string"
+					},
+					"answerOptions": {
+						"description": "Optional possible answers to this question",
+						"items": {
+							"$ref": "#/components/schemas/ActivityAnswerOption"
+						},
+						"type": "array"
+					},
+					"validation": {
+						"$ref": "#/components/schemas/ActivityAnswerValidation"
+					}
+				},
+				"required": ["id", "question", "required"],
+				"title": "Describes activities questions",
+				"type": "object"
+			},
+			"ActivityAnswerOption": {
+				"example": {
+					"answer": "answer",
+					"id": "id"
+				},
+				"properties": {
+					"id": {
+						"description": "the id of this answer",
+						"type": "string"
+					},
+					"answer": {
+						"description": "the display text of this answer",
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"ActivityAnswerValidation": {
+				"default": "String",
+				"enum": ["String", "Int", "Bool", "Date", "DateTime"],
+				"type": "string"
+			},
+			"CommonPax_1": {
+				"example": {
+					"passportNumber": "C3045654",
+					"lastName": "Riverdance",
+					"address": {
+						"country": "Germany",
+						"city": "Littletown",
+						"street": "132, My Street",
+						"countryCode": "DE",
+						"postalCode": "BG23 4YZ",
+						"street2": "street2",
+						"region": "region"
+					},
+					"gender": "Male",
+					"supplierRefId": "supplierRefId",
+					"passengerReduction": "passengerReduction",
+					"secondOrAdditionalNames": [
+						"secondOrAdditionalNames",
+						"secondOrAdditionalNames"
+					],
+					"title": "MR",
+					"birthDate": "1990-01-01",
+					"firstName": "Mike",
+					"nezasaRefId": "nezasaRefId",
+					"nationality": "DE",
+					"electronicContactDetails": {
+						"website": "www.example.com",
+						"phones": [
+							{
+								"mobile": true,
+								"company": false,
+								"landline": false,
+								"fax": false,
+								"value": "+41 44 123 45 67"
+							},
+							{
+								"mobile": true,
+								"company": false,
+								"landline": false,
+								"fax": false,
+								"value": "+41 44 123 45 67"
+							}
+						],
+						"email": "mike.riverdance@example.com"
+					},
+					"passportIssuingCountryCode": "passportIssuingCountryCode",
+					"isMainContact": true,
+					"passportExpirationDate": "2030-01-01",
+					"age": 30
+				},
+				"properties": {
+					"age": {
+						"description": "age of the pax at the beginning of the TravelPeriod",
+						"example": 30,
+						"format": "int32",
+						"type": "integer"
+					},
+					"firstName": {
+						"description": "first name of the pax",
+						"example": "Mike",
+						"type": "string"
+					},
+					"lastName": {
+						"description": "last name of the pax",
+						"example": "Riverdance",
+						"type": "string"
+					},
+					"passportNumber": {
+						"description": "passport number of the pax",
+						"example": "C3045654",
+						"type": "string"
+					},
+					"nationality": {
+						"description": "2 letters code of the country (ISO 3166-1 alpha-2)",
+						"example": "DE",
+						"type": "string"
+					},
+					"address": {
+						"$ref": "#/components/schemas/GeoAddress"
+					},
+					"electronicContactDetails": {
+						"$ref": "#/components/schemas/ContactElectronicContactDetails_1"
+					},
+					"nezasaRefId": {
+						"description": "an optional identifier of the pax used for correlation",
+						"type": "string"
+					},
+					"supplierRefId": {
+						"description": "an optional supplier identifier of the pax",
+						"type": "string"
+					},
+					"isMainContact": {
+						"description": "if this pax is the main contact",
+						"type": "boolean"
+					},
+					"gender": {
+						"$ref": "#/components/schemas/CommonGender"
+					},
+					"birthDate": {
+						"description": "This date is parsed / serialized through DateTimeFormatter.ISO_LOCAL_DATE\n",
+						"example": "1990-01-01",
+						"title": "The birth date of the pax",
+						"type": "string"
+					},
+					"passportExpirationDate": {
+						"description": "Expiration date of the passport",
+						"example": "2030-01-01",
+						"type": "string"
+					},
+					"secondOrAdditionalNames": {
+						"description": "additional names beside first and last names",
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"passportIssuingCountryCode": {
+						"description": "country that issued the passport",
+						"type": "string"
+					},
+					"passengerReduction": {
+						"description": "passenger reduction identifier (half-fare, swiss-pass, student)",
+						"type": "string"
+					},
+					"title": {
+						"$ref": "#/components/schemas/CommonPaxTitle"
+					}
+				},
+				"required": ["age", "birthDate"],
+				"title": "Basic representation of a pax",
+				"type": "object"
+			},
+			"ContactElectronicContactDetails_1": {
+				"description": "Electronic contacts like phone, email, and website",
+				"example": {
+					"website": "www.example.com",
+					"phones": [
+						{
+							"mobile": true,
+							"company": false,
+							"landline": false,
+							"fax": false,
+							"value": "+41 44 123 45 67"
+						},
+						{
+							"mobile": true,
+							"company": false,
+							"landline": false,
+							"fax": false,
+							"value": "+41 44 123 45 67"
+						}
+					],
+					"email": "mike.riverdance@example.com"
+				},
+				"properties": {
+					"phones": {
+						"items": {
+							"$ref": "#/components/schemas/ContactPhone"
+						},
+						"type": "array"
+					},
+					"email": {
+						"example": "mike.riverdance@example.com",
+						"type": "string"
+					},
+					"website": {
+						"example": "www.example.com",
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"ActivityBookingActivityAnswer": {
+				"example": {
+					"answer": "answer",
+					"id": "id"
+				},
+				"properties": {
+					"id": {
+						"description": "the id of the question",
+						"type": "string"
+					},
+					"answer": {
+						"description": "the text of the answer",
+						"type": "string"
+					}
+				},
+				"title": "An answer to an ActivityQuestion",
+				"type": "object"
+			},
+			"CommonContactDetails": {
+				"example": {
+					"firstName": "Mike",
+					"lastName": "Riverdance",
+					"address": {
+						"country": "Germany",
+						"city": "Littletown",
+						"street": "132, My Street",
+						"countryCode": "DE",
+						"postalCode": "BG23 4YZ",
+						"street2": "street2",
+						"region": "region"
+					},
+					"gender": "Male",
+					"electronicContactDetails": {
+						"website": "www.example.com",
+						"phones": [
+							{
+								"mobile": true,
+								"company": false,
+								"landline": false,
+								"fax": false,
+								"value": "+41 44 123 45 67"
+							},
+							{
+								"mobile": true,
+								"company": false,
+								"landline": false,
+								"fax": false,
+								"value": "+41 44 123 45 67"
+							}
+						],
+						"email": "mike.riverdance@example.com"
+					}
+				},
+				"properties": {
+					"firstName": {
+						"example": "Mike",
+						"title": "first name of the contact",
+						"type": "string"
+					},
+					"lastName": {
+						"example": "Riverdance",
+						"title": "last name of the contact",
+						"type": "string"
+					},
+					"gender": {
+						"$ref": "#/components/schemas/CommonGender"
+					},
+					"electronicContactDetails": {
+						"$ref": "#/components/schemas/ContactElectronicContactDetails_1"
+					},
+					"address": {
+						"$ref": "#/components/schemas/GeoAddress"
+					}
+				},
+				"title": "Basic representation of the contact",
+				"type": "object"
+			},
+			"ActivityBookingBookStatus": {
+				"default": "Unknown",
+				"description": "- Unknown: Unknown. most likely an error happened\n- Requested: Requested. the booking is \"on request\"\n- Confirmed: Confirmed.",
+				"enum": ["Unknown", "Requested", "Confirmed"],
+				"title": "Represents booking status",
+				"type": "string"
+			},
+			"CommonMonetaryValue": {
+				"example": {
+					"currency": "EUR",
+					"value": "230.2"
+				},
+				"properties": {
+					"currency": {
+						"description": "3-letter code (ISO 4217) of the currency",
+						"example": "EUR",
+						"type": "string"
+					},
+					"value": {
+						"description": "The value of the price, e.g. \"230.20\", \"13000.55\"",
+						"example": "230.2",
+						"pattern": "^\\d+\\.\\d{2}$",
+						"type": "string"
+					}
+				},
+				"required": ["currency", "value"],
+				"title": "Representation of a price",
+				"type": "object"
+			},
+			"CommonBookingAvailabilityStatus": {
+				"default": "Unknown",
+				"description": "- Unknown: Unknown. most likely an error happened\n- Available: Available\n- NotAvailable: Not available. the offer cannot be booked",
+				"enum": ["Unknown", "Available", "NotAvailable"],
+				"title": "Represents availability check status",
+				"type": "string"
+			},
+			"NezasaComponentSourceType": {
+				"default": "Private",
+				"description": "Type of contract used to source the product.\n\n - Private: Indicates a private contract. The B2B customer sourced the\n   component from an external source through his own contract, or sourced\n   the component from the Nezasa inventory, which by definition is private.\n - Reseller: Indicates a reseller contract. The B2B customer sourced\n   the component from an external source through a Nezasa reseller\n   contract.",
+				"enum": ["Private", "Reseller"],
+				"type": "string"
+			},
+			"CommonCancellationPolicy": {
+				"default": "Unknown",
+				"description": "Defines the cancellation policy type of a product.\n - Free: The cancellation is free for some time after the booking.\n - FeeApplies: There will be some cancellation fee regardless of when the booking is cancelled.\n - NonRefundable: The cancellation fee is 100% once the offer is booked.",
+				"enum": ["Unknown", "Free", "FeeApplies", "NonRefundable"],
+				"type": "string"
+			},
+			"ActivitiesV1_Offers_request": {
+				"properties": {
+					"currency": {
+						"description": "Preferred currency. 3-letter code (ISO 4217).",
+						"type": "string"
+					},
+					"lang": {
+						"$ref": "#/components/schemas/Language"
+					},
+					"paging": {
+						"$ref": "#/components/schemas/CommonPaging"
+					},
+					"period": {
+						"$ref": "#/components/schemas/CommonTravelPeriod"
+					},
+					"startLocation": {
+						"$ref": "#/components/schemas/GeoLocation"
+					},
+					"endLocation": {
+						"$ref": "#/components/schemas/GeoLocation"
+					},
+					"paxes": {
+						"description": "Passengers participating in the activity",
+						"items": {
+							"$ref": "#/components/schemas/CommonPax"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"currency",
+					"endLocation",
+					"lang",
+					"paxes",
+					"period",
+					"startLocation"
+				],
+				"type": "object"
+			},
+			"ActivitiesV1_OfferDetails_request": {
+				"properties": {
+					"currency": {
+						"description": "Desired currency (3-letter code).",
+						"type": "string"
+					},
+					"lang": {
+						"$ref": "#/components/schemas/Language"
+					},
+					"paging": {
+						"$ref": "#/components/schemas/CommonPaging"
+					},
+					"period": {
+						"$ref": "#/components/schemas/CommonTravelPeriod"
+					},
+					"paxes": {
+						"description": "Passengers participating in the activity",
+						"items": {
+							"$ref": "#/components/schemas/CommonPax"
+						},
+						"type": "array"
+					},
+					"pickupId": {
+						"description": "The optional pickup id.",
+						"type": "string"
+					},
+					"dropoffId": {
+						"description": "The optional dropoff id.",
+						"type": "string"
+					}
+				},
+				"required": ["currency", "lang", "paxes", "period"],
+				"type": "object"
+			},
+			"ActivityDescriptions_otherSections_inner": {
+				"properties": {
+					"label": {
+						"description": "Name of the section",
+						"type": "string"
+					},
+					"description": {
+						"description": "Content of the section. Supports basic HTML.",
+						"type": "string"
+					}
+				},
+				"required": ["description", "label"],
+				"type": "object"
+			}
+		},
+		"securitySchemes": {
+			"BearerAuth": {
+				"bearerFormat": "JWT",
+				"scheme": "bearer",
+				"type": "http"
+			}
+		}
+	}
+}

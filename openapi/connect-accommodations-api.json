@@ -1,0 +1,4693 @@
+{
+	"openapi": "3.0.3",
+	"info": {
+		"description": "The connectAPI for accommodations defines a service API that lets users search for, \nview, book, and cancel accommodations via TripBuilder.\n\nKey Features:\n\n1. **Get List of Accommodations**: Retrieves a list of all available accommodations, \n    including basic details like code, room description, and price.\n2. **Get Accommodation Details**: Provides detailed information about a specific \n    accommodation using its reference.\n3. **Check Accommodation Availability**: Shows the current availability status of \n    an accommodation along with its description.\n4. **Book an Accommodation**: Allows users to book an accommodation offer using its \n    reference and user details.\n5. **Cancel Booking**: Enables users to cancel a booking using its booking reference.\n\nThis API is designed to be RESTful, using standard HTTP methods like\nGET, POST, and DELETE, and it primarily exchanges data in JSON format.\n\n### Change History\n\n| API Version | Docs Version | Changes                                                                                                                     |\n|-------------|--------------|-----------------------------------------------------------------------------------------------------------------------------|\n| 1.0         | 31.07.2023   | Initial version                                                                                                             |\n| 1.1         | 05.06.2024   | Extended spec to support Book and Cancel actions                                                                            |\n| 1.2         | 04.10.2024   | Extended spec to split offer between search and details offer.                                                              |\n|             |              | Added support for available board codes and cancellation policies in search offer model.                                    |\n|             |              | Removed deprecated location field from search and details offer                                                             |\n\n### Authentication\nAll API requests must be made over HTTPS.",
+		"title": "Connect API for Accommodations",
+		"version": "1.2.0"
+	},
+	"servers": [
+		{
+			"description": "production mock server",
+			"url": "https://connectapi.stg.nezasa.com"
+		}
+	],
+	"security": [
+		{
+			"ApiKeyAuth": []
+		},
+		{
+			"BearerAuth": []
+		}
+	],
+	"paths": {
+		"/v1/heartbeat": {
+			"get": {
+				"description": "This endpoint, often known as a \"health check\" endpoint, is used for\nmonitoring and assessing the status of the service. Its main function\nis to signal the health of the service, aiding in identifying any\npotential issues or service breakdowns.\n\nTripBuilder will periodically call this endpoint to check the\nservice's status. The response from this health check endpoint is used\nto assess the current condition of the service. If the service is\noperating correctly, the endpoint will return a positive\nacknowledgment, i.e. a HTTP 200 status code and a message indicating\nthe service's health.\n\nOn the other hand, if the service is not functioning as expected, the\nendpoint will return an error status code and potentially additional\ndata about the issue's nature.\n\nThis proactive health check allows for prompt detection and\nresolution of issues, ensuring the service's reliability and smooth\nfunctioning.",
+				"operationId": "AccommodationsV1_Ping",
+				"parameters": [
+					{
+						"description": "For tracking and debugging, we will include a tracing header with every request. This\ntrace ID follows the W3C Trace Context standard. Users can see this same header in the\nTrip Builder API responses and match it with data in the Supplier system if needed.",
+						"in": "header",
+						"name": "traceparent",
+						"required": false,
+						"schema": {
+							"example": "00-666b4b3800000000089918a4bf7e8d29-40eeac6740412d3f-01",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Status"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"default": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Response to an unsuccessful call."
+					}
+				},
+				"summary": "A method for healthcheck purposes",
+				"tags": ["Heartbeat"]
+			}
+		},
+		"/v1/accommodations": {
+			"post": {
+				"description": "This API uses POST instead of GET for some read operations.\nThis is due to the complexity and size of some queries.\n\nIn HTTP/1.1, GET is typically used for data retrieval. It\nshould be safe and idempotent, causing no side effects.\nHowever, GET has limitations with complex queries or\nlarge data. For instance, some servers or browsers limit\nthe maximum URL length for GET requests.\n\nPOST requests carry their data in the body of the request.\nThis allows for larger and more complex data to be sent.\nThis is useful when the data volume or complexity of\nquery parameters exceeds GET limitations.\n\nIn this API, POST is used for some read operations to\novercome these GET limitations. This allows handling\nof complex queries and large data effectively,\nensuring reliable and efficient API operation.",
+				"operationId": "AccommodationsV1_Offers",
+				"parameters": [
+					{
+						"description": "For tracking and debugging, we will include a tracing header with every request. This\ntrace ID follows the W3C Trace Context standard. Users can see this same header in the\nTrip Builder API responses and match it with data in the Supplier system if needed.",
+						"in": "header",
+						"name": "traceparent",
+						"required": false,
+						"schema": {
+							"example": "00-666b4b3800000000089918a4bf7e8d29-40eeac6740412d3f-01",
+							"type": "string"
+						}
+					},
+					{
+						"description": "An identifier of the contract to differentiate configuration, options or settings.\nNo other configuration parameter will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"required": true,
+						"schema": {
+							"example": "nicetours, 123456",
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AccommodationOffersRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AccommodationOffersResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"400": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Bad Request. The request cannot be fulfilled due to bad syntax."
+					},
+					"404": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource could not be found."
+					},
+					"500": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Internal Server Error. An unexpected condition was encountered."
+					}
+				},
+				"summary": "Get a list of accommodation offers.",
+				"tags": ["Offers"]
+			}
+		},
+		"/v1/accommodations/details": {
+			"post": {
+				"operationId": "AccommodationsV1_OfferDetails",
+				"parameters": [
+					{
+						"description": "For tracking and debugging, we will include a tracing header with every request. This\ntrace ID follows the W3C Trace Context standard. Users can see this same header in the\nTrip Builder API responses and match it with data in the Supplier system if needed.",
+						"in": "header",
+						"name": "traceparent",
+						"required": false,
+						"schema": {
+							"example": "00-666b4b3800000000089918a4bf7e8d29-40eeac6740412d3f-01",
+							"type": "string"
+						}
+					},
+					{
+						"description": "An identifier of the contract to differentiate configuration, options or settings.\nNo other configuration parameter will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"required": true,
+						"schema": {
+							"example": "nicetours, 123456",
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AccommodationOfferDetailsRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AccommodationOfferDetailsResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"400": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Bad Request. The request cannot be fulfilled due to bad syntax."
+					},
+					"404": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource could not be found."
+					},
+					"500": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Internal Server Error. An unexpected condition was encountered."
+					}
+				},
+				"summary": "Get the details of an accommodation offer",
+				"tags": ["OfferDetails"]
+			}
+		},
+		"/v1/accommodations/details/{accommodationCode}": {
+			"post": {
+				"operationId": "AccommodationsV1_OfferDetails_Deprecated",
+				"parameters": [
+					{
+						"description": "For tracking and debugging, we will include a tracing header with every request. This\ntrace ID follows the W3C Trace Context standard. Users can see this same header in the\nTrip Builder API responses and match it with data in the Supplier system if needed.",
+						"in": "header",
+						"name": "traceparent",
+						"required": false,
+						"schema": {
+							"example": "00-666b4b3800000000089918a4bf7e8d29-40eeac6740412d3f-01",
+							"type": "string"
+						}
+					},
+					{
+						"description": "An identifier of the contract to differentiate configuration, options or settings.\nNo other configuration parameter will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"required": true,
+						"schema": {
+							"example": "nicetours, 123456",
+							"type": "string"
+						}
+					},
+					{
+						"description": "Required accommodation code in one of the formats supported by Nezasa.",
+						"in": "path",
+						"name": "accommodationCode",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AccommodationOfferDetailsRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AccommodationOfferDetailsResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"400": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Bad Request. The request cannot be fulfilled due to bad syntax."
+					},
+					"404": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource could not be found."
+					},
+					"500": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Internal Server Error. An unexpected condition was encountered."
+					}
+				},
+				"summary": "[Deprecated] Get the details of an accommodation offer",
+				"tags": ["OfferDetails"]
+			}
+		},
+		"/v1/accommodations/availability": {
+			"post": {
+				"description": "When the users selects an offer, or before Tripbuilder books an offer, we check\navailability. This ensures that the offer is still available at the same price\nwith the same amenities and room types. The offer reference provided by the\nintegration partner must contain all the information needed to uniquely\nidentify the offer and subsequent booking.",
+				"operationId": "AccommodationsV1_Availability",
+				"parameters": [
+					{
+						"description": "For tracking and debugging, we will include a tracing header with every request. This\ntrace ID follows the W3C Trace Context standard. Users can see this same header in the\nTrip Builder API responses and match it with data in the Supplier system if needed.",
+						"in": "header",
+						"name": "traceparent",
+						"required": false,
+						"schema": {
+							"example": "00-666b4b3800000000089918a4bf7e8d29-40eeac6740412d3f-01",
+							"type": "string"
+						}
+					},
+					{
+						"description": "An identifier of the contract to differentiate configuration, options or settings.\nNo other configuration parameter will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"required": true,
+						"schema": {
+							"example": "nicetours, 123456",
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AccommodationAvailabilityRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AccommodationAvailabilityResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"400": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Bad Request. The request cannot be fulfilled due to bad syntax."
+					},
+					"404": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource could not be found."
+					},
+					"500": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Internal Server Error. An unexpected condition was encountered."
+					}
+				},
+				"summary": "Check availability of accommodation offer before booking.",
+				"tags": ["Availability"]
+			}
+		},
+		"/v1/accommodations/availability/{reference}": {
+			"post": {
+				"description": "When the users selects an offer, or before Tripbuilder books an offer, we check\navailability. This ensures that the offer is still available at the same price\nwith the same amenities and room types. The offer reference provided by the\nintegration partner must contain all the information needed to uniquely\nidentify the offer and subsequent booking.",
+				"operationId": "AccommodationsV1_Availability_Deprecated",
+				"parameters": [
+					{
+						"description": "For tracking and debugging, we will include a tracing header with every request. This\ntrace ID follows the W3C Trace Context standard. Users can see this same header in the\nTrip Builder API responses and match it with data in the Supplier system if needed.",
+						"in": "header",
+						"name": "traceparent",
+						"required": false,
+						"schema": {
+							"example": "00-666b4b3800000000089918a4bf7e8d29-40eeac6740412d3f-01",
+							"type": "string"
+						}
+					},
+					{
+						"description": "An identifier of the contract to differentiate configuration, options or settings.\nNo other configuration parameter will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"required": true,
+						"schema": {
+							"example": "nicetours, 123456",
+							"type": "string"
+						}
+					},
+					{
+						"description": "The reference allows the integration partner to uniquely identify the offer.\nIt is limited to 2000 characters. \nNote that TripBuilder does not parse or interpret the booking reference. The integration\npartner can encode necessary information within the reference to facilitate the booking\noperation while maintaining a stateless approach.\nCustomers can plan their trip in advance and book the accommodation later. Therefore,\nif the offer is still valid, the reference must retain its validity until the booking\ntakes place.\nBecause it is in path of the URL, the reference may be URL-encoded.",
+						"in": "path",
+						"name": "reference",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AccommodationAvailabilityRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AccommodationAvailabilityResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"400": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Bad Request. The request cannot be fulfilled due to bad syntax."
+					},
+					"404": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource could not be found."
+					},
+					"500": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Internal Server Error. An unexpected condition was encountered."
+					}
+				},
+				"summary": "[Deprecated] Check availability of accommodation offer before booking.",
+				"tags": ["Availability"]
+			}
+		},
+		"/v1/accommodations/bookings": {
+			"delete": {
+				"description": "Cancels a reservation for a given booking reference. The booking reference is\nreturned by the book response. The integration partner must use this reference to\nuniquely identify and cancel the booking. If the booking consists of more that one\nroom, the integration partner must cancel each room individually.",
+				"operationId": "AccommodationsV1_Cancel",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AccommodationCancelRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AccommodationCancelResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"400": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Bad Request. The request cannot be fulfilled due to bad syntax."
+					},
+					"404": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource could not be found."
+					},
+					"500": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Internal Server Error. An unexpected condition was encountered."
+					}
+				},
+				"summary": "Cancels a reservation",
+				"tags": ["Cancel"]
+			},
+			"post": {
+				"description": "Books an offer in the supplier system. If the offer includes more than one room and\nthe supplier system does not support multi-room bookings, TripBuilder expects the\nintegration partner to book multiple rooms. This means the integration partner must\nmanage errors themselves.",
+				"operationId": "AccommodationsV1_Book",
+				"parameters": [
+					{
+						"description": "For tracking and debugging, we will include a tracing header with every request. This\ntrace ID follows the W3C Trace Context standard. Users can see this same header in the\nTrip Builder API responses and match it with data in the Supplier system if needed.",
+						"in": "header",
+						"name": "traceparent",
+						"required": false,
+						"schema": {
+							"example": "00-666b4b3800000000089918a4bf7e8d29-40eeac6740412d3f-01",
+							"type": "string"
+						}
+					},
+					{
+						"description": "An identifier of the contract to differentiate configuration, options or settings.\nNo other configuration parameter will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"required": true,
+						"schema": {
+							"example": "nicetours, 123456",
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AccommodationBookingRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AccommodationBookingResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"400": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Bad Request. The request cannot be fulfilled due to bad syntax."
+					},
+					"404": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource could not be found."
+					},
+					"500": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Internal Server Error. An unexpected condition was encountered."
+					}
+				},
+				"summary": "Book an offer in the supplier system",
+				"tags": ["Book"]
+			}
+		},
+		"/v1/accommodations/bookings/{reference}": {
+			"delete": {
+				"description": "Cancels a reservation for a given booking reference. The booking reference is\nreturned by the book response. The integration partner must use this reference to\nuniquely identify and cancel the booking. If the booking consists of more that one\nroom, the integration partner must cancel each room individually.",
+				"operationId": "AccommodationsV1_Cancel_Deprecated",
+				"parameters": [
+					{
+						"description": "For tracking and debugging, we will include a tracing header with every request. This\ntrace ID follows the W3C Trace Context standard. Users can see this same header in the\nTrip Builder API responses and match it with data in the Supplier system if needed.",
+						"in": "header",
+						"name": "traceparent",
+						"required": false,
+						"schema": {
+							"example": "00-666b4b3800000000089918a4bf7e8d29-40eeac6740412d3f-01",
+							"type": "string"
+						}
+					},
+					{
+						"description": "An identifier of the contract to differentiate configuration, options or settings.\nNo other configuration parameter will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"required": true,
+						"schema": {
+							"example": "nicetours, 123456",
+							"type": "string"
+						}
+					},
+					{
+						"description": "The booking reference returned by the book response. This reference allows the\nintegration partner to uniquely identify the booking. It is limited to 2000 characters. Note that\nTripBuilder does not parse or interpret the booking reference.\nThe integration partner can encode necessary information within the reference to\nfacilitate booking cancellation while maintaining a stateless approach.\nBecause it is in path of the URL, the reference may be URL-encoded.",
+						"example": "SGVsbG8gd29ybGQ",
+						"in": "path",
+						"name": "reference",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AccommodationCancelResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"400": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Bad Request. The request cannot be fulfilled due to bad syntax."
+					},
+					"404": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource could not be found."
+					},
+					"500": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Internal Server Error. An unexpected condition was encountered."
+					}
+				},
+				"summary": "[Deprecated] Cancels a reservation",
+				"tags": ["Cancel"]
+			},
+			"post": {
+				"description": "Books an offer in the supplier system. If the offer includes more than one room and\nthe supplier system does not support multi-room bookings, TripBuilder expects the\nintegration partner to book multiple rooms. This means the integration partner must\nmanage errors themselves.",
+				"operationId": "AccommodationsV1_Book_Deprecated",
+				"parameters": [
+					{
+						"description": "For tracking and debugging, we will include a tracing header with every request. This\ntrace ID follows the W3C Trace Context standard. Users can see this same header in the\nTrip Builder API responses and match it with data in the Supplier system if needed.",
+						"in": "header",
+						"name": "traceparent",
+						"required": false,
+						"schema": {
+							"example": "00-666b4b3800000000089918a4bf7e8d29-40eeac6740412d3f-01",
+							"type": "string"
+						}
+					},
+					{
+						"description": "An identifier of the contract to differentiate configuration, options or settings.\nNo other configuration parameter will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"required": true,
+						"schema": {
+							"example": "nicetours, 123456",
+							"type": "string"
+						}
+					},
+					{
+						"description": "The offer reference returned by the availability response. This reference allows\nthe integration partner to uniquely identify the booking. It is limited to 2000 characters. Note that\nTripBuilder does not parse or interpret the booking reference. The integration\npartner can encode necessary information within the reference to facilitate\nbooking cancellation while maintaining a stateless approach.\nBecause it is in path of the URL, the reference may be URL-encoded.",
+						"example": "SGVsbG8gd29ybGQ",
+						"in": "path",
+						"name": "reference",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AccommodationBookingRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AccommodationBookingResponse"
+								}
+							}
+						},
+						"description": "A successful response."
+					},
+					"400": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Bad Request. The request cannot be fulfilled due to bad syntax."
+					},
+					"404": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource could not be found."
+					},
+					"500": {
+						"content": {
+							"application/problem+json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProblemResponse"
+								}
+							}
+						},
+						"description": "Internal Server Error. An unexpected condition was encountered."
+					}
+				},
+				"summary": "[Deprecated] Book an offer in the supplier system",
+				"tags": ["Book"]
+			}
+		}
+	},
+	"components": {
+		"parameters": {
+			"TraceparentHeader": {
+				"description": "For tracking and debugging, we will include a tracing header with every request. This\ntrace ID follows the W3C Trace Context standard. Users can see this same header in the\nTrip Builder API responses and match it with data in the Supplier system if needed.",
+				"in": "header",
+				"name": "traceparent",
+				"required": false,
+				"schema": {
+					"example": "00-666b4b3800000000089918a4bf7e8d29-40eeac6740412d3f-01",
+					"type": "string"
+				}
+			},
+			"ContractIdHeader": {
+				"description": "An identifier of the contract to differentiate configuration, options or settings.\nNo other configuration parameter will be supplied by Nezasa.",
+				"in": "header",
+				"name": "Contract-Id",
+				"required": true,
+				"schema": {
+					"example": "nicetours, 123456",
+					"type": "string"
+				}
+			}
+		},
+		"responses": {
+			"BadRequest": {
+				"content": {
+					"application/problem+json": {
+						"schema": {
+							"$ref": "#/components/schemas/ProblemResponse"
+						}
+					}
+				},
+				"description": "Bad Request. The request cannot be fulfilled due to bad syntax."
+			},
+			"NotFound": {
+				"content": {
+					"application/problem+json": {
+						"schema": {
+							"$ref": "#/components/schemas/ProblemResponse"
+						}
+					}
+				},
+				"description": "Not Found. The requested resource could not be found."
+			},
+			"InternalServerError": {
+				"content": {
+					"application/problem+json": {
+						"schema": {
+							"$ref": "#/components/schemas/ProblemResponse"
+						}
+					}
+				},
+				"description": "Internal Server Error. An unexpected condition was encountered."
+			}
+		},
+		"schemas": {
+			"Status": {
+				"example": {
+					"code": 0,
+					"details": ["details", "details"],
+					"message": "message"
+				},
+				"properties": {
+					"code": {
+						"format": "int32",
+						"type": "integer"
+					},
+					"message": {
+						"type": "string"
+					},
+					"details": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"required": ["message"],
+				"type": "object"
+			},
+			"ProblemResponse": {
+				"properties": {
+					"message": {
+						"description": "A human-readable problem description in English. Maybe be shown to the end user of \nthe system. An actionable message whenever possible. Doesn't contain credentials \nand other secrets.",
+						"example": "Customer phone number must start with a country code prefix, e.g +41.",
+						"type": "string"
+					},
+					"code": {
+						"description": "Identifies the error type. Snake case (using underscores).",
+						"example": "invalid_argument",
+						"type": "string"
+					},
+					"rawRequests": {
+						"description": "A list of unprocessed requests to the supplier system. If no external system is\ninvolved, the list will be empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": ["{ queryId: 1257, success: true }"],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"rawResponses": {
+						"description": "A list of unprocessed responses from the supplier system. If no external system is\ninvolved, the list will be empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": ["{ queryId: 1257, success: true }"],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"required": ["code", "message"],
+				"type": "object"
+			},
+			"AccommodationOffersRequest": {
+				"description": "Request to search for accommodations based on the given criteria.\nMandatory criteria are the travel period, the room allocation and the accommodation codes.\nAdditionally can also support filtering by board codes, on request and non-refundable offers.",
+				"example": {
+					"market": "DE",
+					"period": {
+						"endDate": "2023-08-14",
+						"nights": 1,
+						"startTime": "12:00:00",
+						"endTime": "16:00:00",
+						"startDate": "2024-08-01"
+					},
+					"accommodationCodes": ["123456", "123456"],
+					"onRequest": false,
+					"roomAllocation": [
+						{
+							"reference": 1,
+							"paxes": [
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								},
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								}
+							]
+						},
+						{
+							"reference": 1,
+							"paxes": [
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								},
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								}
+							]
+						}
+					],
+					"currency": "EUR",
+					"paging": {
+						"resultsFrom": 1,
+						"total": 0,
+						"pageSize": 6
+					},
+					"boardCodes": ["BB", "BB"],
+					"lang": "de",
+					"nonRefundable": false,
+					"purchaseChannel": "K"
+				},
+				"properties": {
+					"currency": {
+						"description": "Preferred currency. 3-letter code (ISO 4217).",
+						"example": "EUR",
+						"type": "string"
+					},
+					"lang": {
+						"$ref": "#/components/schemas/Language"
+					},
+					"paging": {
+						"$ref": "#/components/schemas/CommonPaging"
+					},
+					"period": {
+						"$ref": "#/components/schemas/CommonTravelPeriod"
+					},
+					"accommodationCodes": {
+						"description": "Required accommodation codes in one of the formats supported by Nezasa.",
+						"items": {
+							"example": "123456",
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"roomAllocation": {
+						"description": "Required room allocation",
+						"items": {
+							"$ref": "#/components/schemas/RoomAllocation"
+						},
+						"type": "array"
+					},
+					"boardCodes": {
+						"default": [],
+						"description": "Required Nezasa board codes. For possible values, see AccommodationRoom in AccommodationOffer. No filtering will be applied if left empty.",
+						"items": {
+							"example": "BB",
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"onRequest": {
+						"default": false,
+						"description": "Whether to return on request offers in the response",
+						"example": false,
+						"type": "boolean"
+					},
+					"nonRefundable": {
+						"default": false,
+						"description": "Whether to return non-refundable offers in the response",
+						"example": false,
+						"type": "boolean"
+					},
+					"market": {
+						"description": "Market country or point-of-sale. 2 letters code of the country (ISO 3166-1 alpha-2)",
+						"example": "DE",
+						"type": "string"
+					},
+					"purchaseChannel": {
+						"description": "Channel (in supplier-specific format) via which the content is offered",
+						"example": "K",
+						"type": "string"
+					}
+				},
+				"required": [
+					"accommodationCodes",
+					"currency",
+					"lang",
+					"paging",
+					"period",
+					"roomAllocation"
+				],
+				"title": "Request for accommodations",
+				"type": "object"
+			},
+			"AccommodationOffersResponse": {
+				"description": "Response providing a list of accommodation offers.",
+				"example": {
+					"offers": [
+						{
+							"availableBoardCodes": ["BB", "BB"],
+							"rooms": [
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								},
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								}
+							],
+							"onRequest": true,
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"supplierExtras": {
+								"isExternal": true,
+								"location": [
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									},
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									}
+								]
+							},
+							"accommodationName": "Hotel name",
+							"reference": "reference",
+							"accommodationCode": "123456",
+							"availableCancellationPolicies": [
+								{
+									"rules": [
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										},
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										}
+									],
+									"cancellationType": "Unknown"
+								},
+								{
+									"rules": [
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										},
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										}
+									],
+									"cancellationType": "Unknown"
+								}
+							],
+							"supplier": "supplier",
+							"surcharges": [
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								},
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								}
+							],
+							"promoCode": "promoCode",
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									},
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									}
+								],
+								"cancellationType": "Unknown"
+							},
+							"remarks": [
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								},
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								}
+							]
+						},
+						{
+							"availableBoardCodes": ["BB", "BB"],
+							"rooms": [
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								},
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								}
+							],
+							"onRequest": true,
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"supplierExtras": {
+								"isExternal": true,
+								"location": [
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									},
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									}
+								]
+							},
+							"accommodationName": "Hotel name",
+							"reference": "reference",
+							"accommodationCode": "123456",
+							"availableCancellationPolicies": [
+								{
+									"rules": [
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										},
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										}
+									],
+									"cancellationType": "Unknown"
+								},
+								{
+									"rules": [
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										},
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										}
+									],
+									"cancellationType": "Unknown"
+								}
+							],
+							"supplier": "supplier",
+							"surcharges": [
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								},
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								}
+							],
+							"promoCode": "promoCode",
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									},
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									}
+								],
+								"cancellationType": "Unknown"
+							},
+							"remarks": [
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								},
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								}
+							]
+						}
+					],
+					"accommodations": [
+						{
+							"availableBoardCodes": ["BB", "BB"],
+							"rooms": [
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								},
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								}
+							],
+							"onRequest": true,
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"supplierExtras": {
+								"isExternal": true,
+								"location": [
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									},
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									}
+								]
+							},
+							"accommodationName": "Hotel name",
+							"reference": "reference",
+							"accommodationCode": "123456",
+							"availableCancellationPolicies": [
+								{
+									"rules": [
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										},
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										}
+									],
+									"cancellationType": "Unknown"
+								},
+								{
+									"rules": [
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										},
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										}
+									],
+									"cancellationType": "Unknown"
+								}
+							],
+							"supplier": "supplier",
+							"surcharges": [
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								},
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								}
+							],
+							"promoCode": "promoCode",
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									},
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									}
+								],
+								"cancellationType": "Unknown"
+							},
+							"remarks": [
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								},
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								}
+							]
+						},
+						{
+							"availableBoardCodes": ["BB", "BB"],
+							"rooms": [
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								},
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								}
+							],
+							"onRequest": true,
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"supplierExtras": {
+								"isExternal": true,
+								"location": [
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									},
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									}
+								]
+							},
+							"accommodationName": "Hotel name",
+							"reference": "reference",
+							"accommodationCode": "123456",
+							"availableCancellationPolicies": [
+								{
+									"rules": [
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										},
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										}
+									],
+									"cancellationType": "Unknown"
+								},
+								{
+									"rules": [
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										},
+										{
+											"startDatetime": "2023-08-01T00:00:00",
+											"amount": {
+												"currency": "EUR",
+												"value": "230.2"
+											},
+											"percentage": 50,
+											"endDatetime": "2023-08-01T23:59:00"
+										}
+									],
+									"cancellationType": "Unknown"
+								}
+							],
+							"supplier": "supplier",
+							"surcharges": [
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								},
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								}
+							],
+							"promoCode": "promoCode",
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									},
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									}
+								],
+								"cancellationType": "Unknown"
+							},
+							"remarks": [
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								},
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								}
+							]
+						}
+					],
+					"rawRequests": [
+						"{ \"queryId\": 1257, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"ABC123\", \"reason\": \"Client request\" }, \"requestTime\": \"2024-06-15T14:30:00Z\", \"success\": true }",
+						"{ \"queryId\": 1258, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"XYZ789\", \"reason\": \"System error\" }, \"requestTime\": \"2024-06-15T14:31:00Z\", \"success\": false }"
+					],
+					"paging": {
+						"resultsFrom": 1,
+						"total": 0,
+						"pageSize": 6
+					},
+					"notifications": [
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						},
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						}
+					],
+					"rawResponses": [
+						"{ \"queryId\": 1257, \"responseTime\": \"2024-06-15T14:30:05Z\", \"statusCode\": 200, \"body\": { \"message\": \"Cancellation confirmed\", \"cancellationId\": \"CANC123\" } }",
+						"{ \"queryId\": 1258, \"responseTime\": \"2024-06-15T14:31:05Z\", \"statusCode\": 500, \"body\": { \"error\": \"Internal server error\" } }"
+					]
+				},
+				"properties": {
+					"accommodations": {
+						"items": {
+							"$ref": "#/components/schemas/AccommodationSearchOffer"
+						},
+						"title": "[Deprecated] Use offers field instead.",
+						"type": "array"
+					},
+					"offers": {
+						"description": "List of accommodation offers for the request accommodation codes. Not an exhaustive list of offers of accommodations.\nWhen possible, returns the cheapest offer per every of accommodation code and offer cancellation type. Otherwise, returns the cheapest offer per\naccommodation code, understanding that the customer won't necessarily see the accommodation offer if they look for offers with a particular cancellation\ntype.",
+						"items": {
+							"$ref": "#/components/schemas/AccommodationSearchOffer"
+						},
+						"title": "List of accommodation offers.",
+						"type": "array"
+					},
+					"paging": {
+						"$ref": "#/components/schemas/CommonPaging"
+					},
+					"notifications": {
+						"items": {
+							"$ref": "#/components/schemas/CommonNotification"
+						},
+						"title": "[Deprecated] Use a non-200 code response with ProblemResponse instead",
+						"type": "array"
+					},
+					"rawRequests": {
+						"description": "A list of unprocessed requests to the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": [
+							"{ \"queryId\": 1257, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"ABC123\", \"reason\": \"Client request\" }, \"requestTime\": \"2024-06-15T14:30:00Z\", \"success\": true }",
+							"{ \"queryId\": 1258, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"XYZ789\", \"reason\": \"System error\" }, \"requestTime\": \"2024-06-15T14:31:00Z\", \"success\": false }"
+						],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"rawResponses": {
+						"description": "A list of unprocessed responses from the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": [
+							"{ \"queryId\": 1257, \"responseTime\": \"2024-06-15T14:30:05Z\", \"statusCode\": 200, \"body\": { \"message\": \"Cancellation confirmed\", \"cancellationId\": \"CANC123\" } }",
+							"{ \"queryId\": 1258, \"responseTime\": \"2024-06-15T14:31:05Z\", \"statusCode\": 500, \"body\": { \"error\": \"Internal server error\" } }"
+						],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"type": "object"
+			},
+			"AccommodationOfferDetailsRequest": {
+				"description": "Request to check the full accommodation details of an offer.\nUses the accommodation code of the hotel.",
+				"example": {
+					"market": "DE",
+					"accommodationCode": "123456",
+					"period": {
+						"endDate": "2023-08-14",
+						"nights": 1,
+						"startTime": "12:00:00",
+						"endTime": "16:00:00",
+						"startDate": "2024-08-01"
+					},
+					"onRequest": false,
+					"roomAllocation": [
+						{
+							"reference": 1,
+							"paxes": [
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								},
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								}
+							]
+						},
+						{
+							"reference": 1,
+							"paxes": [
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								},
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								}
+							]
+						}
+					],
+					"currency": "EUR",
+					"boardCodes": ["BB", "BB"],
+					"lang": "de",
+					"nonRefundable": false,
+					"purchaseChannel": "K"
+				},
+				"properties": {
+					"accommodationCode": {
+						"description": "Required accommodation code in one of the formats supported by Nezasa.",
+						"example": "123456",
+						"type": "string"
+					},
+					"currency": {
+						"description": "Preferred currency. 3-letter code (ISO 4217).",
+						"example": "EUR",
+						"type": "string"
+					},
+					"lang": {
+						"$ref": "#/components/schemas/Language"
+					},
+					"period": {
+						"$ref": "#/components/schemas/CommonTravelPeriod"
+					},
+					"roomAllocation": {
+						"description": "Required room allocation",
+						"items": {
+							"$ref": "#/components/schemas/RoomAllocation"
+						},
+						"type": "array"
+					},
+					"boardCodes": {
+						"default": [],
+						"description": "Required Nezasa board codes. For possible values, see AccommodationRoom in AccommodationOffer. No filtering will be applied if left empty.",
+						"items": {
+							"example": "BB",
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"onRequest": {
+						"default": false,
+						"description": "Whether to return on request offers",
+						"example": false,
+						"type": "boolean"
+					},
+					"nonRefundable": {
+						"default": false,
+						"description": "Whether to return non-refundable offers",
+						"example": false,
+						"type": "boolean"
+					},
+					"market": {
+						"description": "Market country or point-of-sale. 2 letters code of the country (ISO 3166-1 alpha-2)",
+						"example": "DE",
+						"type": "string"
+					},
+					"purchaseChannel": {
+						"description": "Channel (in supplier-specific format) via which the content is offered",
+						"example": "K",
+						"type": "string"
+					}
+				},
+				"required": ["currency", "lang", "period", "roomAllocation"],
+				"title": "Request for accommodation details",
+				"type": "object"
+			},
+			"AccommodationOfferDetailsResponse": {
+				"description": "Response providing the details of an accommodation offer.",
+				"example": {
+					"offers": [
+						{
+							"reference": "reference",
+							"accommodationCode": "123456",
+							"rooms": [
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								},
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								}
+							],
+							"onRequest": true,
+							"supplier": "supplier",
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"surcharges": [
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								},
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								}
+							],
+							"promoCode": "promoCode",
+							"supplierExtras": {
+								"isExternal": true,
+								"location": [
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									},
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									}
+								]
+							},
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									},
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									}
+								],
+								"cancellationType": "Unknown"
+							},
+							"remarks": [
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								},
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								}
+							],
+							"accommodationName": "Hotel name"
+						},
+						{
+							"reference": "reference",
+							"accommodationCode": "123456",
+							"rooms": [
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								},
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								}
+							],
+							"onRequest": true,
+							"supplier": "supplier",
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"surcharges": [
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								},
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								}
+							],
+							"promoCode": "promoCode",
+							"supplierExtras": {
+								"isExternal": true,
+								"location": [
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									},
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									}
+								]
+							},
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									},
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									}
+								],
+								"cancellationType": "Unknown"
+							},
+							"remarks": [
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								},
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								}
+							],
+							"accommodationName": "Hotel name"
+						}
+					],
+					"accommodations": [
+						{
+							"reference": "reference",
+							"accommodationCode": "123456",
+							"rooms": [
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								},
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								}
+							],
+							"onRequest": true,
+							"supplier": "supplier",
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"surcharges": [
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								},
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								}
+							],
+							"promoCode": "promoCode",
+							"supplierExtras": {
+								"isExternal": true,
+								"location": [
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									},
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									}
+								]
+							},
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									},
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									}
+								],
+								"cancellationType": "Unknown"
+							},
+							"remarks": [
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								},
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								}
+							],
+							"accommodationName": "Hotel name"
+						},
+						{
+							"reference": "reference",
+							"accommodationCode": "123456",
+							"rooms": [
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								},
+								{
+									"allocationReference": 1,
+									"salesPrice": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"boardCode": "BB",
+									"name": "Family room with sea view",
+									"roomCode": "DBL"
+								}
+							],
+							"onRequest": true,
+							"supplier": "supplier",
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"surcharges": [
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								},
+								{
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"description": "City tax",
+									"included": true,
+									"mandatory": false
+								}
+							],
+							"promoCode": "promoCode",
+							"supplierExtras": {
+								"isExternal": true,
+								"location": [
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									},
+									{
+										"locationType": "Country",
+										"locationCode": "MAD"
+									}
+								]
+							},
+							"cancellationPolicy": {
+								"rules": [
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									},
+									{
+										"startDatetime": "2023-08-01T00:00:00",
+										"amount": {
+											"currency": "EUR",
+											"value": "230.2"
+										},
+										"percentage": 50,
+										"endDatetime": "2023-08-01T23:59:00"
+									}
+								],
+								"cancellationType": "Unknown"
+							},
+							"remarks": [
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								},
+								{
+									"language": "de",
+									"text": "Check-in time at 15:00. Check-out time at 11:00.",
+									"lang": "de"
+								}
+							],
+							"accommodationName": "Hotel name"
+						}
+					],
+					"rawRequests": [
+						"{ \"queryId\": 1257, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"ABC123\", \"reason\": \"Client request\" }, \"requestTime\": \"2024-06-15T14:30:00Z\", \"success\": true }",
+						"{ \"queryId\": 1258, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"XYZ789\", \"reason\": \"System error\" }, \"requestTime\": \"2024-06-15T14:31:00Z\", \"success\": false }"
+					],
+					"notifications": [
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						},
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						}
+					],
+					"rawResponses": [
+						"{ \"queryId\": 1257, \"responseTime\": \"2024-06-15T14:30:05Z\", \"statusCode\": 200, \"body\": { \"message\": \"Cancellation confirmed\", \"cancellationId\": \"CANC123\" } }",
+						"{ \"queryId\": 1258, \"responseTime\": \"2024-06-15T14:31:05Z\", \"statusCode\": 500, \"body\": { \"error\": \"Internal server error\" } }"
+					]
+				},
+				"properties": {
+					"accommodations": {
+						"items": {
+							"$ref": "#/components/schemas/AccommodationDetailsOffer"
+						},
+						"title": "[Deprecated] Use offers field instead.",
+						"type": "array"
+					},
+					"offers": {
+						"items": {
+							"$ref": "#/components/schemas/AccommodationDetailsOffer"
+						},
+						"title": "List of accommodation offers of the selected accommodation",
+						"type": "array"
+					},
+					"notifications": {
+						"items": {
+							"$ref": "#/components/schemas/CommonNotification"
+						},
+						"title": "[Deprecated] Use a non-200 code response with ProblemResponse instead",
+						"type": "array"
+					},
+					"rawRequests": {
+						"description": "A list of unprocessed requests to the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": [
+							"{ \"queryId\": 1257, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"ABC123\", \"reason\": \"Client request\" }, \"requestTime\": \"2024-06-15T14:30:00Z\", \"success\": true }",
+							"{ \"queryId\": 1258, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"XYZ789\", \"reason\": \"System error\" }, \"requestTime\": \"2024-06-15T14:31:00Z\", \"success\": false }"
+						],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"rawResponses": {
+						"description": "A list of unprocessed responses from the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": [
+							"{ \"queryId\": 1257, \"responseTime\": \"2024-06-15T14:30:05Z\", \"statusCode\": 200, \"body\": { \"message\": \"Cancellation confirmed\", \"cancellationId\": \"CANC123\" } }",
+							"{ \"queryId\": 1258, \"responseTime\": \"2024-06-15T14:31:05Z\", \"statusCode\": 500, \"body\": { \"error\": \"Internal server error\" } }"
+						],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"type": "object"
+			},
+			"AccommodationAvailabilityRequest": {
+				"description": "Check if the accommodation offer is available. Use the `offerReference` provided \nby the offer search or details.",
+				"example": {
+					"reference": "reference",
+					"market": "DE",
+					"currency": "EUR",
+					"lang": "de"
+				},
+				"properties": {
+					"reference": {
+						"description": "The offer `reference` returned from the accommodations details call.",
+						"type": "string"
+					},
+					"currency": {
+						"description": "Preferred currency. 3-letter code (ISO 4217).",
+						"example": "EUR",
+						"type": "string"
+					},
+					"lang": {
+						"$ref": "#/components/schemas/Language"
+					},
+					"market": {
+						"description": "2 letters code of the country (ISO 3166-1 alpha-2)",
+						"example": "DE",
+						"title": "Market country or point-of-sale.",
+						"type": "string"
+					}
+				},
+				"required": ["currency", "lang"],
+				"title": "Check accommodation availability",
+				"type": "object"
+			},
+			"AccommodationAvailabilityResponse": {
+				"description": "Response providing the details of an accommodation offer.",
+				"example": {
+					"accommodation": {
+						"reference": "reference",
+						"accommodationCode": "123456",
+						"rooms": [
+							{
+								"allocationReference": 1,
+								"salesPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"boardCode": "BB",
+								"name": "Family room with sea view",
+								"roomCode": "DBL"
+							},
+							{
+								"allocationReference": 1,
+								"salesPrice": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"boardCode": "BB",
+								"name": "Family room with sea view",
+								"roomCode": "DBL"
+							}
+						],
+						"onRequest": true,
+						"supplier": "supplier",
+						"salesPrice": {
+							"currency": "EUR",
+							"value": "230.2"
+						},
+						"surcharges": [
+							{
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"description": "City tax",
+								"included": true,
+								"mandatory": false
+							},
+							{
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"description": "City tax",
+								"included": true,
+								"mandatory": false
+							}
+						],
+						"promoCode": "promoCode",
+						"supplierExtras": {
+							"isExternal": true,
+							"location": [
+								{
+									"locationType": "Country",
+									"locationCode": "MAD"
+								},
+								{
+									"locationType": "Country",
+									"locationCode": "MAD"
+								}
+							]
+						},
+						"cancellationPolicy": {
+							"rules": [
+								{
+									"startDatetime": "2023-08-01T00:00:00",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 50,
+									"endDatetime": "2023-08-01T23:59:00"
+								},
+								{
+									"startDatetime": "2023-08-01T00:00:00",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 50,
+									"endDatetime": "2023-08-01T23:59:00"
+								}
+							],
+							"cancellationType": "Unknown"
+						},
+						"remarks": [
+							{
+								"language": "de",
+								"text": "Check-in time at 15:00. Check-out time at 11:00.",
+								"lang": "de"
+							},
+							{
+								"language": "de",
+								"text": "Check-in time at 15:00. Check-out time at 11:00.",
+								"lang": "de"
+							}
+						],
+						"accommodationName": "Hotel name"
+					},
+					"rawRequests": [
+						"{ \"queryId\": 1257, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"ABC123\", \"reason\": \"Client request\" }, \"requestTime\": \"2024-06-15T14:30:00Z\", \"success\": true }",
+						"{ \"queryId\": 1258, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"XYZ789\", \"reason\": \"System error\" }, \"requestTime\": \"2024-06-15T14:31:00Z\", \"success\": false }"
+					],
+					"notifications": [
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						},
+						{
+							"notificationLevel": "Info",
+							"description": "description",
+							"notificationType": "InputValidation"
+						}
+					],
+					"rawResponses": [
+						"{ \"queryId\": 1257, \"responseTime\": \"2024-06-15T14:30:05Z\", \"statusCode\": 200, \"body\": { \"message\": \"Cancellation confirmed\", \"cancellationId\": \"CANC123\" } }",
+						"{ \"queryId\": 1258, \"responseTime\": \"2024-06-15T14:31:05Z\", \"statusCode\": 500, \"body\": { \"error\": \"Internal server error\" } }"
+					]
+				},
+				"properties": {
+					"accommodation": {
+						"$ref": "#/components/schemas/AccommodationDetailsOffer"
+					},
+					"notifications": {
+						"items": {
+							"$ref": "#/components/schemas/CommonNotification"
+						},
+						"title": "[Deprecated] Use a non-200 code response with ProblemResponse instead",
+						"type": "array"
+					},
+					"rawRequests": {
+						"description": "A list of unprocessed requests to the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": [
+							"{ \"queryId\": 1257, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"ABC123\", \"reason\": \"Client request\" }, \"requestTime\": \"2024-06-15T14:30:00Z\", \"success\": true }",
+							"{ \"queryId\": 1258, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"XYZ789\", \"reason\": \"System error\" }, \"requestTime\": \"2024-06-15T14:31:00Z\", \"success\": false }"
+						],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"rawResponses": {
+						"description": "A list of unprocessed responses from the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": [
+							"{ \"queryId\": 1257, \"responseTime\": \"2024-06-15T14:30:05Z\", \"statusCode\": 200, \"body\": { \"message\": \"Cancellation confirmed\", \"cancellationId\": \"CANC123\" } }",
+							"{ \"queryId\": 1258, \"responseTime\": \"2024-06-15T14:31:05Z\", \"statusCode\": 500, \"body\": { \"error\": \"Internal server error\" } }"
+						],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"type": "object"
+			},
+			"AccommodationBookingRequest": {
+				"description": "Books the accommodation offer if available. Use the offer reference provided \nby the `AccommodationAvailabilityRequest`.",
+				"example": {
+					"reference": "reference",
+					"roomAllocation": [
+						{
+							"reference": 1,
+							"paxes": [
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								},
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								}
+							]
+						},
+						{
+							"reference": 1,
+							"paxes": [
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								},
+								{
+									"passportNumber": "C3045654",
+									"lastName": "Riverdance",
+									"address": {
+										"country": "Germany",
+										"city": "Littletown",
+										"street": "132, My Street",
+										"countryCode": "DE",
+										"postalCode": "BG23 4YZ",
+										"street2": "street2",
+										"region": "region"
+									},
+									"gender": "Male",
+									"supplierRefId": "supplierRefId",
+									"passengerReduction": "passengerReduction",
+									"secondOrAdditionalNames": [
+										"secondOrAdditionalNames",
+										"secondOrAdditionalNames"
+									],
+									"title": "MR",
+									"birthDate": "1990-01-01",
+									"firstName": "Mike",
+									"nezasaRefId": "nezasaRefId",
+									"nationality": "DE",
+									"electronicContactDetails": {
+										"website": "www.example.com",
+										"phones": [
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											},
+											{
+												"mobile": true,
+												"company": false,
+												"landline": false,
+												"fax": false,
+												"value": "+41 44 123 45 67"
+											}
+										],
+										"email": "mike.riverdance@example.com"
+									},
+									"passportIssuingCountryCode": "passportIssuingCountryCode",
+									"isMainContact": true,
+									"passportExpirationDate": "2030-01-01",
+									"age": 30
+								}
+							]
+						}
+					],
+					"contact": {
+						"firstName": "Mike",
+						"lastName": "Riverdance",
+						"address": {
+							"country": "Germany",
+							"city": "Littletown",
+							"street": "132, My Street",
+							"countryCode": "DE",
+							"postalCode": "BG23 4YZ",
+							"street2": "street2",
+							"region": "region"
+						},
+						"gender": "Male",
+						"electronicContactDetails": {
+							"website": "www.example.com",
+							"phones": [
+								{
+									"mobile": true,
+									"company": false,
+									"landline": false,
+									"fax": false,
+									"value": "+41 44 123 45 67"
+								},
+								{
+									"mobile": true,
+									"company": false,
+									"landline": false,
+									"fax": false,
+									"value": "+41 44 123 45 67"
+								}
+							],
+							"email": "mike.riverdance@example.com"
+						}
+					},
+					"lang": "de"
+				},
+				"properties": {
+					"reference": {
+						"description": "The `reference` of an offer returned from the availability call to be booked.",
+						"type": "string"
+					},
+					"lang": {
+						"$ref": "#/components/schemas/Language"
+					},
+					"roomAllocation": {
+						"description": "The room reference refers to the room allocationReference returned by the availability \nresponse and assigns paxes to individual rooms.",
+						"items": {
+							"$ref": "#/components/schemas/RoomAllocation"
+						},
+						"title": "Expected room allocation",
+						"type": "array"
+					},
+					"contact": {
+						"$ref": "#/components/schemas/CommonContactDetails"
+					}
+				},
+				"required": ["contact", "lang", "roomAllocation"],
+				"title": "Book accommodation",
+				"type": "object"
+			},
+			"AccommodationBookingResponse": {
+				"description": "Response providing the result of an accommodation booking.",
+				"example": {
+					"booking": {
+						"bookingReference": "SUNHOTEL-12345#SUNHOTEL-67890",
+						"supplierReferences": [
+							"[\"SUNHOTEL-12345\",\"SUNHOTEL-67890\"]",
+							"[\"SUNHOTEL-12345\",\"SUNHOTEL-67890\"]"
+						],
+						"salesPrice": {
+							"currency": "EUR",
+							"value": "230.2"
+						},
+						"cancellationPolicy": {
+							"rules": [
+								{
+									"startDatetime": "2023-08-01T00:00:00",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 50,
+									"endDatetime": "2023-08-01T23:59:00"
+								},
+								{
+									"startDatetime": "2023-08-01T00:00:00",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 50,
+									"endDatetime": "2023-08-01T23:59:00"
+								}
+							],
+							"cancellationType": "Unknown"
+						},
+						"remarks": [
+							{
+								"language": "de",
+								"text": "Check-in time at 15:00. Check-out time at 11:00.",
+								"lang": "de"
+							},
+							{
+								"language": "de",
+								"text": "Check-in time at 15:00. Check-out time at 11:00.",
+								"lang": "de"
+							}
+						],
+						"status": "Booked"
+					},
+					"rawRequests": [
+						"{ \"queryId\": 1257, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"ABC123\", \"reason\": \"Client request\" }, \"requestTime\": \"2024-06-15T14:30:00Z\", \"success\": true }",
+						"{ \"queryId\": 1258, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"XYZ789\", \"reason\": \"System error\" }, \"requestTime\": \"2024-06-15T14:31:00Z\", \"success\": false }"
+					],
+					"rawResponses": [
+						"{ \"queryId\": 1257, \"responseTime\": \"2024-06-15T14:30:05Z\", \"statusCode\": 200, \"body\": { \"message\": \"Cancellation confirmed\", \"cancellationId\": \"CANC123\" } }",
+						"{ \"queryId\": 1258, \"responseTime\": \"2024-06-15T14:31:05Z\", \"statusCode\": 500, \"body\": { \"error\": \"Internal server error\" } }"
+					]
+				},
+				"properties": {
+					"booking": {
+						"$ref": "#/components/schemas/AccommodationBooking"
+					},
+					"rawRequests": {
+						"description": "A list of unprocessed requests to the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": [
+							"{ \"queryId\": 1257, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"ABC123\", \"reason\": \"Client request\" }, \"requestTime\": \"2024-06-15T14:30:00Z\", \"success\": true }",
+							"{ \"queryId\": 1258, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"XYZ789\", \"reason\": \"System error\" }, \"requestTime\": \"2024-06-15T14:31:00Z\", \"success\": false }"
+						],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"rawResponses": {
+						"description": "A list of unprocessed responses from the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": [
+							"{ \"queryId\": 1257, \"responseTime\": \"2024-06-15T14:30:05Z\", \"statusCode\": 200, \"body\": { \"message\": \"Cancellation confirmed\", \"cancellationId\": \"CANC123\" } }",
+							"{ \"queryId\": 1258, \"responseTime\": \"2024-06-15T14:31:05Z\", \"statusCode\": 500, \"body\": { \"error\": \"Internal server error\" } }"
+						],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"required": ["booking"],
+				"type": "object"
+			},
+			"AccommodationCancelRequest": {
+				"description": "Request to cancel a booking with the `bookingReference` provided by the booking operation.",
+				"example": {
+					"reference": "BOOKING-123456"
+				},
+				"properties": {
+					"reference": {
+						"description": "The `reference` of the booking to be canceled.",
+						"example": "BOOKING-123456",
+						"type": "string"
+					}
+				},
+				"required": ["bookingReference"],
+				"title": "Cancel accommodation",
+				"type": "object"
+			},
+			"AccommodationCancelResponse": {
+				"description": "Response providing the results of a booking cancellation.",
+				"example": {
+					"rawRequests": [
+						"{ \"queryId\": 1257, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"ABC123\", \"reason\": \"Client request\" }, \"requestTime\": \"2024-06-15T14:30:00Z\", \"success\": true }",
+						"{ \"queryId\": 1258, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"XYZ789\", \"reason\": \"System error\" }, \"requestTime\": \"2024-06-15T14:31:00Z\", \"success\": false }"
+					],
+					"rawResponses": [
+						"{ \"queryId\": 1257, \"responseTime\": \"2024-06-15T14:30:05Z\", \"statusCode\": 200, \"body\": { \"message\": \"Cancellation confirmed\", \"cancellationId\": \"CANC123\" } }",
+						"{ \"queryId\": 1258, \"responseTime\": \"2024-06-15T14:31:05Z\", \"statusCode\": 500, \"body\": { \"error\": \"Internal server error\" } }"
+					]
+				},
+				"properties": {
+					"rawRequests": {
+						"description": "A list of unprocessed requests to the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": [
+							"{ \"queryId\": 1257, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"ABC123\", \"reason\": \"Client request\" }, \"requestTime\": \"2024-06-15T14:30:00Z\", \"success\": true }",
+							"{ \"queryId\": 1258, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"XYZ789\", \"reason\": \"System error\" }, \"requestTime\": \"2024-06-15T14:31:00Z\", \"success\": false }"
+						],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"rawResponses": {
+						"description": "A list of unprocessed responses from the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+						"example": [
+							"{ \"queryId\": 1257, \"responseTime\": \"2024-06-15T14:30:05Z\", \"statusCode\": 200, \"body\": { \"message\": \"Cancellation confirmed\", \"cancellationId\": \"CANC123\" } }",
+							"{ \"queryId\": 1258, \"responseTime\": \"2024-06-15T14:31:05Z\", \"statusCode\": 500, \"body\": { \"error\": \"Internal server error\" } }"
+						],
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"type": "object"
+			},
+			"Language": {
+				"default": "de",
+				"description": "2-letter code (ISO 639-1)",
+				"enum": ["de", "en", "fr", "it", "nl", "es", "fi", "pt"],
+				"example": "de",
+				"title": "Supported languages",
+				"type": "string"
+			},
+			"CommonPaging": {
+				"example": {
+					"resultsFrom": 1,
+					"total": 0,
+					"pageSize": 6
+				},
+				"properties": {
+					"total": {
+						"description": "Total number of results\nCan be ignored in requests, the response always give back this information",
+						"format": "int32",
+						"type": "integer"
+					},
+					"pageSize": {
+						"description": "Number of results per page\nIf the parameter is not specified, the pageSize is the total number of results",
+						"format": "int32",
+						"type": "integer"
+					},
+					"resultsFrom": {
+						"description": "Position (zero based) of the first result to retrieve\nIf the parameter is not specified, the value is 0",
+						"format": "int32",
+						"type": "integer"
+					}
+				},
+				"title": "Paging management for a request",
+				"type": "object"
+			},
+			"CommonTravelPeriod": {
+				"description": "Generic travel period",
+				"example": {
+					"endDate": "2023-08-14",
+					"nights": 1,
+					"startTime": "12:00:00",
+					"endTime": "16:00:00",
+					"startDate": "2024-08-01"
+				},
+				"properties": {
+					"startDate": {
+						"description": "Desired starting date of the product represented in ISO8601 format (yyyy-MM-dd)",
+						"example": "2024-08-01",
+						"type": "string"
+					},
+					"startTime": {
+						"description": "Desired starting zoned date/time of the product in ISO8601 format (HH:mm:ss.SSS).\nEmpty if the activity doesn't have a specific start time (e.g. full day).",
+						"example": "12:00:00",
+						"type": "string"
+					},
+					"endDate": {
+						"description": "Desired ending date of the product represented in ISO8601 format (yyyy-MM-dd)\nEmpty if the activity doesn't have a specific end time (e.g. full day).",
+						"example": "2023-08-14",
+						"type": "string"
+					},
+					"endTime": {
+						"description": "Desired ending zoned date/time of the product in ISO8601 format (HH:mm:ss.SSS).",
+						"example": "16:00:00",
+						"type": "string"
+					},
+					"nights": {
+						"description": "Duration in nights of the product",
+						"example": 1,
+						"format": "int32",
+						"type": "integer"
+					}
+				},
+				"required": ["endDate", "startDate"],
+				"type": "object"
+			},
+			"RoomAllocation": {
+				"description": "Represents the association between a room reference and a list of paxes.",
+				"example": {
+					"reference": 1,
+					"paxes": [
+						{
+							"passportNumber": "C3045654",
+							"lastName": "Riverdance",
+							"address": {
+								"country": "Germany",
+								"city": "Littletown",
+								"street": "132, My Street",
+								"countryCode": "DE",
+								"postalCode": "BG23 4YZ",
+								"street2": "street2",
+								"region": "region"
+							},
+							"gender": "Male",
+							"supplierRefId": "supplierRefId",
+							"passengerReduction": "passengerReduction",
+							"secondOrAdditionalNames": [
+								"secondOrAdditionalNames",
+								"secondOrAdditionalNames"
+							],
+							"title": "MR",
+							"birthDate": "1990-01-01",
+							"firstName": "Mike",
+							"nezasaRefId": "nezasaRefId",
+							"nationality": "DE",
+							"electronicContactDetails": {
+								"website": "www.example.com",
+								"phones": [
+									{
+										"mobile": true,
+										"company": false,
+										"landline": false,
+										"fax": false,
+										"value": "+41 44 123 45 67"
+									},
+									{
+										"mobile": true,
+										"company": false,
+										"landline": false,
+										"fax": false,
+										"value": "+41 44 123 45 67"
+									}
+								],
+								"email": "mike.riverdance@example.com"
+							},
+							"passportIssuingCountryCode": "passportIssuingCountryCode",
+							"isMainContact": true,
+							"passportExpirationDate": "2030-01-01",
+							"age": 30
+						},
+						{
+							"passportNumber": "C3045654",
+							"lastName": "Riverdance",
+							"address": {
+								"country": "Germany",
+								"city": "Littletown",
+								"street": "132, My Street",
+								"countryCode": "DE",
+								"postalCode": "BG23 4YZ",
+								"street2": "street2",
+								"region": "region"
+							},
+							"gender": "Male",
+							"supplierRefId": "supplierRefId",
+							"passengerReduction": "passengerReduction",
+							"secondOrAdditionalNames": [
+								"secondOrAdditionalNames",
+								"secondOrAdditionalNames"
+							],
+							"title": "MR",
+							"birthDate": "1990-01-01",
+							"firstName": "Mike",
+							"nezasaRefId": "nezasaRefId",
+							"nationality": "DE",
+							"electronicContactDetails": {
+								"website": "www.example.com",
+								"phones": [
+									{
+										"mobile": true,
+										"company": false,
+										"landline": false,
+										"fax": false,
+										"value": "+41 44 123 45 67"
+									},
+									{
+										"mobile": true,
+										"company": false,
+										"landline": false,
+										"fax": false,
+										"value": "+41 44 123 45 67"
+									}
+								],
+								"email": "mike.riverdance@example.com"
+							},
+							"passportIssuingCountryCode": "passportIssuingCountryCode",
+							"isMainContact": true,
+							"passportExpirationDate": "2030-01-01",
+							"age": 30
+						}
+					]
+				},
+				"properties": {
+					"reference": {
+						"description": "The pax allocation reference (index 1 based reference) as defined in the \nAccommodationRoom object.",
+						"example": 1,
+						"format": "int32",
+						"maximum": 6,
+						"minimum": 1,
+						"title": "Pax allocation reference",
+						"type": "integer"
+					},
+					"paxes": {
+						"description": "The room paxes",
+						"items": {
+							"$ref": "#/components/schemas/CommonPax"
+						},
+						"type": "array"
+					}
+				},
+				"title": "Pax allocation in an accommodation",
+				"type": "object"
+			},
+			"AccommodationSearchOffer": {
+				"description": "Representation of an accommodation offer.\nCan be used to return the cheapest offer for an accommodation with additional information about available cancellation policies and board codes.",
+				"example": {
+					"availableBoardCodes": ["BB", "BB"],
+					"rooms": [
+						{
+							"allocationReference": 1,
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"boardCode": "BB",
+							"name": "Family room with sea view",
+							"roomCode": "DBL"
+						},
+						{
+							"allocationReference": 1,
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"boardCode": "BB",
+							"name": "Family room with sea view",
+							"roomCode": "DBL"
+						}
+					],
+					"onRequest": true,
+					"salesPrice": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"supplierExtras": {
+						"isExternal": true,
+						"location": [
+							{
+								"locationType": "Country",
+								"locationCode": "MAD"
+							},
+							{
+								"locationType": "Country",
+								"locationCode": "MAD"
+							}
+						]
+					},
+					"accommodationName": "Hotel name",
+					"reference": "reference",
+					"accommodationCode": "123456",
+					"availableCancellationPolicies": [
+						{
+							"rules": [
+								{
+									"startDatetime": "2023-08-01T00:00:00",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 50,
+									"endDatetime": "2023-08-01T23:59:00"
+								},
+								{
+									"startDatetime": "2023-08-01T00:00:00",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 50,
+									"endDatetime": "2023-08-01T23:59:00"
+								}
+							],
+							"cancellationType": "Unknown"
+						},
+						{
+							"rules": [
+								{
+									"startDatetime": "2023-08-01T00:00:00",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 50,
+									"endDatetime": "2023-08-01T23:59:00"
+								},
+								{
+									"startDatetime": "2023-08-01T00:00:00",
+									"amount": {
+										"currency": "EUR",
+										"value": "230.2"
+									},
+									"percentage": 50,
+									"endDatetime": "2023-08-01T23:59:00"
+								}
+							],
+							"cancellationType": "Unknown"
+						}
+					],
+					"supplier": "supplier",
+					"surcharges": [
+						{
+							"amount": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"description": "City tax",
+							"included": true,
+							"mandatory": false
+						},
+						{
+							"amount": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"description": "City tax",
+							"included": true,
+							"mandatory": false
+						}
+					],
+					"promoCode": "promoCode",
+					"cancellationPolicy": {
+						"rules": [
+							{
+								"startDatetime": "2023-08-01T00:00:00",
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"percentage": 50,
+								"endDatetime": "2023-08-01T23:59:00"
+							},
+							{
+								"startDatetime": "2023-08-01T00:00:00",
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"percentage": 50,
+								"endDatetime": "2023-08-01T23:59:00"
+							}
+						],
+						"cancellationType": "Unknown"
+					},
+					"remarks": [
+						{
+							"language": "de",
+							"text": "Check-in time at 15:00. Check-out time at 11:00.",
+							"lang": "de"
+						},
+						{
+							"language": "de",
+							"text": "Check-in time at 15:00. Check-out time at 11:00.",
+							"lang": "de"
+						}
+					]
+				},
+				"properties": {
+					"reference": {
+						"description": "The `reference` allows the integration partner to uniquely identify the offer.\nNote that TripBuilder does not parse or interpret the booking reference.\nThe integration partner can encode necessary information within the reference\nto facilitate the booking operation while maintaining a stateless approach.\nNote that customers can plan their trip in advance and book the accommodation \nlater. Therefore, if the offer is still valid, the `reference` must retain \nits validity until the booking takes place.",
+						"title": "Offer reference",
+						"type": "string"
+					},
+					"accommodationCode": {
+						"description": "Accommodation code as requested, in one of the formats supported by Nezasa.",
+						"example": "123456",
+						"title": "Accommodation code",
+						"type": "string"
+					},
+					"accommodationName": {
+						"description": "The name of the accommodation",
+						"example": "Hotel name",
+						"title": "Accommodation name",
+						"type": "string"
+					},
+					"supplier": {
+						"description": "The name or a short identification of a specific supplier that provided the offer. Necessary for the means of offer source identification and\nfiltering. String, not an enum, for quicker enablement.\n\nTrip Builder offers configuration referencing suppliers and sometimes enables supplier-specific content. Therefore, please use identifiers already\npresent in the system, or consult Nezasa for new suppliers. The list of present suppliers:\n\nAmadeus, Anixe, AOT, AtCore, ATI, Bonotel, CMI, Diethelm, Eurotours, Expedia, ExpediaRapid, GetARoom, Hotelbeds, Jonview, Juniper, Limatours, MTSGlobe,\nNWT, Peakwork, PhoenixUnlimited, Priceline, Ratehawk, Restel, STC, Sunhotels, TBO, TourVest, TourVestPush, Travolutionary, W2M, Welcomebeds, YouTravel",
+						"title": "Offer supplier",
+						"type": "string"
+					},
+					"rooms": {
+						"description": "The room and paxes associated with the offer",
+						"items": {
+							"$ref": "#/components/schemas/AccommodationRoom"
+						},
+						"title": "Offer rooms",
+						"type": "array"
+					},
+					"promoCode": {
+						"title": "Accommodation promocode",
+						"type": "string"
+					},
+					"salesPrice": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					},
+					"surcharges": {
+						"items": {
+							"$ref": "#/components/schemas/AccommodationSurcharge"
+						},
+						"type": "array"
+					},
+					"onRequest": {
+						"description": "Whether the offer is on request",
+						"example": true,
+						"title": "Offer on request",
+						"type": "boolean"
+					},
+					"cancellationPolicy": {
+						"$ref": "#/components/schemas/AccommodationCancellationPolicy"
+					},
+					"remarks": {
+						"description": "Provide remarks returned by the supplier system.",
+						"items": {
+							"$ref": "#/components/schemas/AccommodationRemark"
+						},
+						"title": "Offer Remarks",
+						"type": "array"
+					},
+					"supplierExtras": {
+						"$ref": "#/components/schemas/Supplier_specific_extra_information_"
+					},
+					"availableCancellationPolicies": {
+						"description": "List of available cancellation policies for an hotel.\nWhen only the cheapest offer is returned for an hotel, this list should contain the complete set of available cancellation policies.",
+						"items": {
+							"$ref": "#/components/schemas/AccommodationCancellationPolicy"
+						},
+						"title": "Available cancellation policies",
+						"type": "array"
+					},
+					"availableBoardCodes": {
+						"description": "List of available board codes for for an hotel.\nWhen only the cheapest offer is returned for an hotel, this list should contain the complete set of available board codes.",
+						"items": {
+							"$ref": "#/components/schemas/AccommodationBoardCode"
+						},
+						"title": "Available board codes",
+						"type": "array"
+					}
+				},
+				"required": [
+					"accommodationCode",
+					"cancellationPolicy",
+					"onRequest",
+					"reference",
+					"rooms",
+					"salesPrice",
+					"supplier"
+				],
+				"type": "object"
+			},
+			"CommonNotification": {
+				"example": {
+					"notificationLevel": "Info",
+					"description": "description",
+					"notificationType": "InputValidation"
+				},
+				"properties": {
+					"notificationLevel": {
+						"$ref": "#/components/schemas/CommonNotificationLevel"
+					},
+					"notificationType": {
+						"$ref": "#/components/schemas/CommonNotificationType"
+					},
+					"description": {
+						"description": "Description of the notification",
+						"type": "string"
+					}
+				},
+				"title": "Business notifications",
+				"type": "object"
+			},
+			"CommonNotificationLevel": {
+				"default": "Info",
+				"enum": ["Info", "Warning", "Error"],
+				"title": "Level of the notification",
+				"type": "string"
+			},
+			"CommonNotificationType": {
+				"default": "InputValidation",
+				"enum": ["InputValidation", "Business", "Remarks", "SupplierSystem"],
+				"title": "Type of the notification",
+				"type": "string"
+			},
+			"RawRequests": {
+				"description": "A list of unprocessed requests to the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+				"example": [
+					"{ \"queryId\": 1257, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"ABC123\", \"reason\": \"Client request\" }, \"requestTime\": \"2024-06-15T14:30:00Z\", \"success\": true }",
+					"{ \"queryId\": 1258, \"endpoint\": \"/cancelBooking\", \"parameters\": { \"bookingId\": \"XYZ789\", \"reason\": \"System error\" }, \"requestTime\": \"2024-06-15T14:31:00Z\", \"success\": false }"
+				],
+				"items": {
+					"type": "string"
+				},
+				"type": "array"
+			},
+			"RawResponses": {
+				"description": "A list of unprocessed responses from the supplier system. If no external system is\ninvolved, the list is empty. The list is sorted by request time, and any\nsensitive information, such as credentials, is redacted.",
+				"example": [
+					"{ \"queryId\": 1257, \"responseTime\": \"2024-06-15T14:30:05Z\", \"statusCode\": 200, \"body\": { \"message\": \"Cancellation confirmed\", \"cancellationId\": \"CANC123\" } }",
+					"{ \"queryId\": 1258, \"responseTime\": \"2024-06-15T14:31:05Z\", \"statusCode\": 500, \"body\": { \"error\": \"Internal server error\" } }"
+				],
+				"items": {
+					"type": "string"
+				},
+				"type": "array"
+			},
+			"AccommodationDetailsOffer": {
+				"description": "Representation of an accommodation offer.\nUsed to return the detailed information of an accommodation offer.",
+				"example": {
+					"reference": "reference",
+					"accommodationCode": "123456",
+					"rooms": [
+						{
+							"allocationReference": 1,
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"boardCode": "BB",
+							"name": "Family room with sea view",
+							"roomCode": "DBL"
+						},
+						{
+							"allocationReference": 1,
+							"salesPrice": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"boardCode": "BB",
+							"name": "Family room with sea view",
+							"roomCode": "DBL"
+						}
+					],
+					"onRequest": true,
+					"supplier": "supplier",
+					"salesPrice": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"surcharges": [
+						{
+							"amount": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"description": "City tax",
+							"included": true,
+							"mandatory": false
+						},
+						{
+							"amount": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"description": "City tax",
+							"included": true,
+							"mandatory": false
+						}
+					],
+					"promoCode": "promoCode",
+					"supplierExtras": {
+						"isExternal": true,
+						"location": [
+							{
+								"locationType": "Country",
+								"locationCode": "MAD"
+							},
+							{
+								"locationType": "Country",
+								"locationCode": "MAD"
+							}
+						]
+					},
+					"cancellationPolicy": {
+						"rules": [
+							{
+								"startDatetime": "2023-08-01T00:00:00",
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"percentage": 50,
+								"endDatetime": "2023-08-01T23:59:00"
+							},
+							{
+								"startDatetime": "2023-08-01T00:00:00",
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"percentage": 50,
+								"endDatetime": "2023-08-01T23:59:00"
+							}
+						],
+						"cancellationType": "Unknown"
+					},
+					"remarks": [
+						{
+							"language": "de",
+							"text": "Check-in time at 15:00. Check-out time at 11:00.",
+							"lang": "de"
+						},
+						{
+							"language": "de",
+							"text": "Check-in time at 15:00. Check-out time at 11:00.",
+							"lang": "de"
+						}
+					],
+					"accommodationName": "Hotel name"
+				},
+				"properties": {
+					"reference": {
+						"description": "The `reference` allows the integration partner to uniquely identify the offer.\nIt is limited to 2000 characters. \nNote that TripBuilder does not parse or interpret the booking reference.\nThe integration partner can encode necessary information within the reference\nto facilitate the booking operation while maintaining a stateless approach.\nNote that customers can plan their trip in advance and book the accommodation \nlater. Therefore, if the offer is still valid, the `reference` must retain \nits validity until the booking takes place.",
+						"title": "Offer reference",
+						"type": "string"
+					},
+					"accommodationCode": {
+						"description": "Accommodation code as requested, in one of the formats supported by Nezasa.",
+						"example": "123456",
+						"title": "Accommodation code",
+						"type": "string"
+					},
+					"accommodationName": {
+						"description": "The name of the accommodation",
+						"example": "Hotel name",
+						"title": "Accommodation name",
+						"type": "string"
+					},
+					"supplier": {
+						"description": "The name or a short identification of a specific supplier that provided the offer. Necessary for the means of offer source identification and\nfiltering. String, not an enum, for quicker enablement.\n\nTrip Builder offers configuration referencing suppliers and sometimes enables supplier-specific content. Therefore, please use identifiers already\npresent in the system, or consult Nezasa for new suppliers. The list of present suppliers:\n\nAmadeus, Anixe, AOT, AtCore, ATI, Bonotel, CMI, Diethelm, Eurotours, Expedia, ExpediaRapid, GetARoom, Hotelbeds, Jonview, Juniper, Limatours, MTSGlobe,\nNWT, Peakwork, PhoenixUnlimited, Priceline, Ratehawk, Restel, STC, Sunhotels, TBO, TourVest, TourVestPush, Travolutionary, W2M, Welcomebeds, YouTravel",
+						"title": "Offer supplier",
+						"type": "string"
+					},
+					"rooms": {
+						"description": "The room and paxes associated with the offer",
+						"items": {
+							"$ref": "#/components/schemas/AccommodationRoom"
+						},
+						"title": "Offer rooms",
+						"type": "array"
+					},
+					"promoCode": {
+						"title": "Accommodation promocode",
+						"type": "string"
+					},
+					"salesPrice": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					},
+					"surcharges": {
+						"items": {
+							"$ref": "#/components/schemas/AccommodationSurcharge"
+						},
+						"type": "array"
+					},
+					"onRequest": {
+						"description": "Whether the offer is on request",
+						"example": true,
+						"title": "Offer on request",
+						"type": "boolean"
+					},
+					"cancellationPolicy": {
+						"$ref": "#/components/schemas/AccommodationCancellationPolicy"
+					},
+					"remarks": {
+						"description": "Provide remarks returned by the supplier system.",
+						"items": {
+							"$ref": "#/components/schemas/AccommodationRemark"
+						},
+						"title": "Offer Remarks",
+						"type": "array"
+					},
+					"supplierExtras": {
+						"$ref": "#/components/schemas/Supplier_specific_extra_information_"
+					}
+				},
+				"required": [
+					"accommodationCode",
+					"cancellationPolicy",
+					"onRequest",
+					"reference",
+					"rooms",
+					"salesPrice",
+					"supplier"
+				],
+				"type": "object"
+			},
+			"CommonContactDetails": {
+				"example": {
+					"firstName": "Mike",
+					"lastName": "Riverdance",
+					"address": {
+						"country": "Germany",
+						"city": "Littletown",
+						"street": "132, My Street",
+						"countryCode": "DE",
+						"postalCode": "BG23 4YZ",
+						"street2": "street2",
+						"region": "region"
+					},
+					"gender": "Male",
+					"electronicContactDetails": {
+						"website": "www.example.com",
+						"phones": [
+							{
+								"mobile": true,
+								"company": false,
+								"landline": false,
+								"fax": false,
+								"value": "+41 44 123 45 67"
+							},
+							{
+								"mobile": true,
+								"company": false,
+								"landline": false,
+								"fax": false,
+								"value": "+41 44 123 45 67"
+							}
+						],
+						"email": "mike.riverdance@example.com"
+					}
+				},
+				"properties": {
+					"firstName": {
+						"example": "Mike",
+						"title": "first name of the contact",
+						"type": "string"
+					},
+					"lastName": {
+						"example": "Riverdance",
+						"title": "last name of the contact",
+						"type": "string"
+					},
+					"gender": {
+						"$ref": "#/components/schemas/CommonGender"
+					},
+					"electronicContactDetails": {
+						"$ref": "#/components/schemas/ContactElectronicContactDetails"
+					},
+					"address": {
+						"$ref": "#/components/schemas/GeoAddress"
+					}
+				},
+				"title": "Basic representation of the contact",
+				"type": "object"
+			},
+			"CommonGender": {
+				"default": "Male",
+				"enum": ["Male", "Female", "Unknown"],
+				"example": "Male",
+				"type": "string"
+			},
+			"ContactElectronicContactDetails": {
+				"description": "Electronic contacts like phone, email, and website",
+				"example": {
+					"website": "www.example.com",
+					"phones": [
+						{
+							"mobile": true,
+							"company": false,
+							"landline": false,
+							"fax": false,
+							"value": "+41 44 123 45 67"
+						},
+						{
+							"mobile": true,
+							"company": false,
+							"landline": false,
+							"fax": false,
+							"value": "+41 44 123 45 67"
+						}
+					],
+					"email": "mike.riverdance@example.com"
+				},
+				"properties": {
+					"phones": {
+						"items": {
+							"$ref": "#/components/schemas/ContactPhone"
+						},
+						"type": "array"
+					},
+					"email": {
+						"example": "mike.riverdance@example.com",
+						"type": "string"
+					},
+					"website": {
+						"example": "www.example.com",
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"ContactPhone": {
+				"description": "Phone contact like mobile, landline, fax",
+				"example": {
+					"mobile": true,
+					"company": false,
+					"landline": false,
+					"fax": false,
+					"value": "+41 44 123 45 67"
+				},
+				"properties": {
+					"mobile": {
+						"example": true,
+						"type": "boolean"
+					},
+					"landline": {
+						"example": false,
+						"type": "boolean"
+					},
+					"fax": {
+						"example": false,
+						"type": "boolean"
+					},
+					"company": {
+						"example": false,
+						"type": "boolean"
+					},
+					"value": {
+						"example": "+41 44 123 45 67",
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"GeoAddress": {
+				"description": "Basic representation of a physical address.",
+				"example": {
+					"country": "Germany",
+					"city": "Littletown",
+					"street": "132, My Street",
+					"countryCode": "DE",
+					"postalCode": "BG23 4YZ",
+					"street2": "street2",
+					"region": "region"
+				},
+				"properties": {
+					"street": {
+						"description": "street address, first line",
+						"example": "132, My Street",
+						"type": "string"
+					},
+					"street2": {
+						"description": "street address, second line if needed",
+						"type": "string"
+					},
+					"city": {
+						"example": "Littletown",
+						"title": "name of the city",
+						"type": "string"
+					},
+					"postalCode": {
+						"example": "BG23 4YZ",
+						"title": "postal code",
+						"type": "string"
+					},
+					"region": {
+						"title": "region / state",
+						"type": "string"
+					},
+					"countryCode": {
+						"description": "2 letters code of the country (ISO 3166-1 alpha-2)",
+						"example": "DE",
+						"type": "string"
+					},
+					"country": {
+						"example": "Germany",
+						"title": "country",
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"AccommodationBooking": {
+				"example": {
+					"bookingReference": "SUNHOTEL-12345#SUNHOTEL-67890",
+					"supplierReferences": [
+						"[\"SUNHOTEL-12345\",\"SUNHOTEL-67890\"]",
+						"[\"SUNHOTEL-12345\",\"SUNHOTEL-67890\"]"
+					],
+					"salesPrice": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"cancellationPolicy": {
+						"rules": [
+							{
+								"startDatetime": "2023-08-01T00:00:00",
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"percentage": 50,
+								"endDatetime": "2023-08-01T23:59:00"
+							},
+							{
+								"startDatetime": "2023-08-01T00:00:00",
+								"amount": {
+									"currency": "EUR",
+									"value": "230.2"
+								},
+								"percentage": 50,
+								"endDatetime": "2023-08-01T23:59:00"
+							}
+						],
+						"cancellationType": "Unknown"
+					},
+					"remarks": [
+						{
+							"language": "de",
+							"text": "Check-in time at 15:00. Check-out time at 11:00.",
+							"lang": "de"
+						},
+						{
+							"language": "de",
+							"text": "Check-in time at 15:00. Check-out time at 11:00.",
+							"lang": "de"
+						}
+					],
+					"status": "Booked"
+				},
+				"properties": {
+					"bookingReference": {
+						"description": "The booking reference returned by the book response. This reference allows the\nintegration partner to uniquely identify the booking. It is limited to 2000 characters. Note that\nTripBuilder does not parse or interpret the booking reference.\nThe integration partner can encode necessary information within the reference to\nfacilitate booking cancellation while maintaining a stateless approach.",
+						"example": "SUNHOTEL-12345#SUNHOTEL-67890",
+						"title": "Booking reference",
+						"type": "string"
+					},
+					"supplierReferences": {
+						"description": "Supplier booking Ids.\n- For suppliers where multiple bookings are required to fulfil the booking (one per\nroom for example) we will end up with multiple supplier ids/references\n- This list will contain references for all the booking references, ordered by the\nroom index (1st room → 1st reference)\n\nThis is useful if end customer wants to check a particular booking in B2B system",
+						"items": {
+							"example": "[\"SUNHOTEL-12345\",\"SUNHOTEL-67890\"]",
+							"type": "string"
+						},
+						"title": "Supplier references",
+						"type": "array"
+					},
+					"status": {
+						"$ref": "#/components/schemas/BookingStatus"
+					},
+					"salesPrice": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					},
+					"cancellationPolicy": {
+						"$ref": "#/components/schemas/AccommodationCancellationPolicy"
+					},
+					"remarks": {
+						"description": "Hotel reservation details as provided by end supplier.",
+						"items": {
+							"$ref": "#/components/schemas/AccommodationRemark"
+						},
+						"title": "Booking Remarks",
+						"type": "array"
+					}
+				},
+				"required": [
+					"bookingReference",
+					"salesPrice",
+					"status",
+					"supplierReferences"
+				],
+				"type": "object"
+			},
+			"BookingStatus": {
+				"default": "Booked",
+				"description": "- Booked: Booking was confirmed.\n- OnRequest: Booking was confirmed \"on request\". \n  Only offers that have the onRequest flag set to \n  true can be booked on request.",
+				"enum": ["Booked", "OnRequest"],
+				"example": "Booked",
+				"title": "Represents booking status on the supplier side",
+				"type": "string"
+			},
+			"CommonPax": {
+				"example": {
+					"passportNumber": "C3045654",
+					"lastName": "Riverdance",
+					"address": {
+						"country": "Germany",
+						"city": "Littletown",
+						"street": "132, My Street",
+						"countryCode": "DE",
+						"postalCode": "BG23 4YZ",
+						"street2": "street2",
+						"region": "region"
+					},
+					"gender": "Male",
+					"supplierRefId": "supplierRefId",
+					"passengerReduction": "passengerReduction",
+					"secondOrAdditionalNames": [
+						"secondOrAdditionalNames",
+						"secondOrAdditionalNames"
+					],
+					"title": "MR",
+					"birthDate": "1990-01-01",
+					"firstName": "Mike",
+					"nezasaRefId": "nezasaRefId",
+					"nationality": "DE",
+					"electronicContactDetails": {
+						"website": "www.example.com",
+						"phones": [
+							{
+								"mobile": true,
+								"company": false,
+								"landline": false,
+								"fax": false,
+								"value": "+41 44 123 45 67"
+							},
+							{
+								"mobile": true,
+								"company": false,
+								"landline": false,
+								"fax": false,
+								"value": "+41 44 123 45 67"
+							}
+						],
+						"email": "mike.riverdance@example.com"
+					},
+					"passportIssuingCountryCode": "passportIssuingCountryCode",
+					"isMainContact": true,
+					"passportExpirationDate": "2030-01-01",
+					"age": 30
+				},
+				"properties": {
+					"age": {
+						"description": "age of the pax at the beginning of the TravelPeriod",
+						"example": 30,
+						"format": "int32",
+						"type": "integer"
+					},
+					"firstName": {
+						"description": "first name of the pax",
+						"example": "Mike",
+						"type": "string"
+					},
+					"lastName": {
+						"description": "last name of the pax",
+						"example": "Riverdance",
+						"type": "string"
+					},
+					"passportNumber": {
+						"description": "passport number of the pax",
+						"example": "C3045654",
+						"type": "string"
+					},
+					"nationality": {
+						"description": "2 letters code of the country (ISO 3166-1 alpha-2)",
+						"example": "DE",
+						"type": "string"
+					},
+					"address": {
+						"$ref": "#/components/schemas/GeoAddress"
+					},
+					"electronicContactDetails": {
+						"$ref": "#/components/schemas/ContactElectronicContactDetails"
+					},
+					"nezasaRefId": {
+						"description": "an optional identifier of the pax used for correlation",
+						"type": "string"
+					},
+					"supplierRefId": {
+						"description": "an optional supplier identifier of the pax",
+						"type": "string"
+					},
+					"isMainContact": {
+						"description": "if this pax is the main contact",
+						"type": "boolean"
+					},
+					"gender": {
+						"$ref": "#/components/schemas/CommonGender"
+					},
+					"birthDate": {
+						"description": "This date is parsed / serialized through DateTimeFormatter.ISO_LOCAL_DATE\n",
+						"example": "1990-01-01",
+						"title": "The birth date of the pax",
+						"type": "string"
+					},
+					"passportExpirationDate": {
+						"description": "Expiration date of the passport",
+						"example": "2030-01-01",
+						"type": "string"
+					},
+					"secondOrAdditionalNames": {
+						"description": "additional names beside first and last names",
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"passportIssuingCountryCode": {
+						"description": "country that issued the passport",
+						"type": "string"
+					},
+					"passengerReduction": {
+						"description": "passenger reduction identifier (half-fare, swiss-pass, student)",
+						"type": "string"
+					},
+					"title": {
+						"$ref": "#/components/schemas/CommonPaxTitle"
+					}
+				},
+				"required": ["age", "birthDate"],
+				"title": "Basic representation of a pax",
+				"type": "object"
+			},
+			"CommonPaxTitle": {
+				"description": "- MR: Mister\n- MRS: Mistress or Missus\n- MS: Miss\n- MSTR: Master, typically used for young boys\n- DR: Doctor\n- PROF: Professor\n- REV: Reverend\n- CAPT: Captain\n- SIR: Sir\n- LADY: Lady\n- INF: Infant (0-2 years old)\n- CHD: Child (2-11 years old)",
+				"enum": [
+					"MR",
+					"MRS",
+					"MS",
+					"MSTR",
+					"DR",
+					"PROF",
+					"REV",
+					"CAPT",
+					"SIR",
+					"LADY",
+					"INF",
+					"CHD"
+				],
+				"title": "The title of pax",
+				"type": "string"
+			},
+			"AccommodationRoom": {
+				"description": "Detailed information about a room, including the room code, the board code and allocation reference.",
+				"example": {
+					"allocationReference": 1,
+					"salesPrice": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"boardCode": "BB",
+					"name": "Family room with sea view",
+					"roomCode": "DBL"
+				},
+				"properties": {
+					"allocationReference": {
+						"description": "The Nezasa pax allocation reference (index 1 based reference)",
+						"example": 1,
+						"format": "int32",
+						"maximum": 6,
+						"minimum": 1,
+						"title": "Pax allocation reference",
+						"type": "integer"
+					},
+					"roomCode": {
+						"description": "The supplier room code",
+						"example": "DBL",
+						"title": "Supplier room code",
+						"type": "string"
+					},
+					"boardCode": {
+						"description": "Nezasa supports the following board codes:\n\n| Code      | Description                             |\n|-----------|-----------------------------------------|\n| RO        | No Meals                                |\n| SC        | Self Catering                           |\n| AB        | American Breakfast                      |\n| BB        | Breakfast                               |\n| CB        | Continental Breakfast                   |\n| DB        | Buffet Breakfast                        |\n| EB        | English Breakfast                       |\n| IB        | Irish Breakfast                         |\n| LB        | Light Breakfast                         |\n| SB        | Scottish Breakfast                      |\n| HB        | Half board                              |\n| BH        | Breakfast + Half board                  |\n| HBP       | Half board plus                         |\n| FB        | Full board                              |\n| FH        | Half board + Full board                 |\n| FBP       | Full board plus                         |\n| AI        | All inclusive                           |\n| AIP       | All inclusive plus                      |\n| AIPP      | All inclusive double plus               |\n| AILight   | All inclusive - drinks only during meals|\n| AIPremium | All inclusive plus premium services     |\n| AIUltra   | All inclusive plus ultra services       |\n| AP        | According to Program                    |\n| DC        | Dining credit included                  |\n| DO        | Dinner Only                             |\n| LO        | Lunch Only                              |",
+						"example": "BB",
+						"title": "Nezasa board code",
+						"type": "string"
+					},
+					"name": {
+						"description": "The supplier room name or description",
+						"example": "Family room with sea view",
+						"title": "Room name",
+						"type": "string"
+					},
+					"salesPrice": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					}
+				},
+				"required": ["allocationReference", "boardCode", "roomCode"],
+				"title": "Accommodation room",
+				"type": "object"
+			},
+			"AccommodationBoardCode": {
+				"description": "Nezasa supports the following board codes:\n\n| Code      | Description                             |\n|-----------|-----------------------------------------|\n| RO        | No Meals                                |\n| SC        | Self Catering                           |\n| AB        | American Breakfast                      |\n| BB        | Breakfast                               |\n| CB        | Continental Breakfast                   |\n| DB        | Buffet Breakfast                        |\n| EB        | English Breakfast                       |\n| IB        | Irish Breakfast                         |\n| LB        | Light Breakfast                         |\n| SB        | Scottish Breakfast                      |\n| HB        | Half board                              |\n| BH        | Breakfast + Half board                  |\n| HBP       | Half board plus                         |\n| FB        | Full board                              |\n| FH        | Half board + Full board                 |\n| FBP       | Full board plus                         |\n| AI        | All inclusive                           |\n| AIP       | All inclusive plus                      |\n| AIPP      | All inclusive double plus               |\n| AILight   | All inclusive - drinks only during meals|\n| AIPremium | All inclusive plus premium services     |\n| AIUltra   | All inclusive plus ultra services       |\n| AP        | According to Program                    |\n| DC        | Dining credit included                  |\n| DO        | Dinner Only                             |\n| LO        | Lunch Only                              |",
+				"example": "BB",
+				"title": "Nezasa board code",
+				"type": "string"
+			},
+			"CommonMonetaryValue": {
+				"example": {
+					"currency": "EUR",
+					"value": "230.2"
+				},
+				"properties": {
+					"currency": {
+						"description": "3-letter code (ISO 4217) of the currency",
+						"example": "EUR",
+						"type": "string"
+					},
+					"value": {
+						"description": "The value of the price, e.g. \"230.20\", \"13000.55\"",
+						"example": "230.2",
+						"pattern": "^\\d+\\.\\d{2}$",
+						"type": "string"
+					}
+				},
+				"required": ["currency", "value"],
+				"title": "Representation of a price",
+				"type": "object"
+			},
+			"AccommodationSurcharge": {
+				"description": "Detailed about extra charges associated with the offer.",
+				"example": {
+					"amount": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"description": "City tax",
+					"included": true,
+					"mandatory": false
+				},
+				"properties": {
+					"amount": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					},
+					"included": {
+						"default": true,
+						"description": "whether the surcharge is included in the total amount",
+						"example": true,
+						"type": "boolean"
+					},
+					"mandatory": {
+						"default": false,
+						"description": "Whether the surcharge is mandatory",
+						"example": false,
+						"type": "boolean"
+					},
+					"description": {
+						"description": "Description of the surcharge",
+						"example": "City tax",
+						"type": "string"
+					}
+				},
+				"required": ["amount", "included", "mandatory"],
+				"title": "Accommodation surcharge",
+				"type": "object"
+			},
+			"AccommodationCancellationPolicy": {
+				"description": "Note that TripBuilder will use the cancellationPolicy if set.",
+				"example": {
+					"rules": [
+						{
+							"startDatetime": "2023-08-01T00:00:00",
+							"amount": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"percentage": 50,
+							"endDatetime": "2023-08-01T23:59:00"
+						},
+						{
+							"startDatetime": "2023-08-01T00:00:00",
+							"amount": {
+								"currency": "EUR",
+								"value": "230.2"
+							},
+							"percentage": 50,
+							"endDatetime": "2023-08-01T23:59:00"
+						}
+					],
+					"cancellationType": "Unknown"
+				},
+				"properties": {
+					"cancellationType": {
+						"$ref": "#/components/schemas/CommonCancellationPolicy"
+					},
+					"rules": {
+						"items": {
+							"$ref": "#/components/schemas/AccommodationCancellationPolicyRule"
+						},
+						"type": "array"
+					}
+				},
+				"required": ["cancellationType", "rules"],
+				"title": "The cancellation policy of the accommodation",
+				"type": "object"
+			},
+			"AccommodationCancellationPolicyRule": {
+				"description": "A cancellation policy rule.\nstartDatetime and endDatetime define an interval where this rule applies.\nRules don't overlap and cover the whole period from now until the rental itself.\nstartDatetime is empty whenever the interval starts at now.\nendDatetime is empty whenever the interval lasts until the rental itself.\nEither percentage or amount needs to be provided.",
+				"example": {
+					"startDatetime": "2023-08-01T00:00:00",
+					"amount": {
+						"currency": "EUR",
+						"value": "230.2"
+					},
+					"percentage": 50,
+					"endDatetime": "2023-08-01T23:59:00"
+				},
+				"properties": {
+					"amount": {
+						"$ref": "#/components/schemas/CommonMonetaryValue"
+					},
+					"percentage": {
+						"example": 50,
+						"format": "int64",
+						"title": "a percentage of the booking",
+						"type": "integer"
+					},
+					"startDatetime": {
+						"description": "The start date time of the cancellation policy rule.\nThis date is parsed / serialized through DateTimeFormatter.ISO_LOCAL_DATE_TIME (As defined by rfc3339).\nThe field is empty if and only if the interval starts at now.",
+						"example": "2023-08-01T00:00:00",
+						"type": "string"
+					},
+					"endDatetime": {
+						"description": "The end date time of the cancellation policy rule\nThis date is parsed / serialized through DateTimeFormatter.ISO_LOCAL_DATE_TIME (As defined by rfc3339).\nThe field is empty if and only if the interval lasts until the rental itself.",
+						"example": "2023-08-01T23:59:00",
+						"type": "string"
+					}
+				},
+				"title": "A cancellation policy rule of the accommodation",
+				"type": "object"
+			},
+			"AccommodationRemark": {
+				"description": "Extra information about the accommodation, like check-in and check-out times, accommodation information and additional costs.",
+				"example": {
+					"language": "de",
+					"text": "Check-in time at 15:00. Check-out time at 11:00.",
+					"lang": "de"
+				},
+				"properties": {
+					"lang": {
+						"$ref": "#/components/schemas/Language"
+					},
+					"language": {
+						"$ref": "#/components/schemas/Language"
+					},
+					"text": {
+						"description": "Remarks sent by the reservation system. \nThey can be plain text or formatted with Markdown.",
+						"example": "Check-in time at 15:00. Check-out time at 11:00.",
+						"type": "string"
+					}
+				},
+				"required": ["lang", "text"],
+				"title": "Accommodation remark",
+				"type": "object"
+			},
+			"AccommodationLocation": {
+				"example": {
+					"locationType": "Country",
+					"locationCode": "MAD"
+				},
+				"properties": {
+					"locationCode": {
+						"description": "Location code that will depend on the location type",
+						"example": "MAD",
+						"title": "accommodation location code",
+						"type": "string"
+					},
+					"locationType": {
+						"$ref": "#/components/schemas/AccommodationLocationType"
+					}
+				},
+				"required": ["locationCode", "locationType"],
+				"title": "Location information for the accommodation",
+				"type": "object"
+			},
+			"AccommodationLocationType": {
+				"default": "Country",
+				"enum": ["Country", "Region", "Resort", "Airport"],
+				"type": "string"
+			},
+			"CommonCancellationPolicy": {
+				"default": "Unknown",
+				"description": "Defines the cancellation policy type of a product.\n - Free: The cancellation is free for some time after the booking.\n - FeeApplies: There will be some cancellation fee regardless of when the booking is cancelled.\n - NonRefundable: The cancellation fee is 100% once the offer is booked.",
+				"enum": ["Unknown", "Free", "FeeApplies", "NonRefundable"],
+				"type": "string"
+			},
+			"Supplier_specific_extra_information_": {
+				"description": "Information that was required in the past to build a specific customer integration. \nThose fields are not required.",
+				"example": {
+					"isExternal": true,
+					"location": [
+						{
+							"locationType": "Country",
+							"locationCode": "MAD"
+						},
+						{
+							"locationType": "Country",
+							"locationCode": "MAD"
+						}
+					]
+				},
+				"properties": {
+					"location": {
+						"description": "Geography information of the accommodation",
+						"items": {
+							"$ref": "#/components/schemas/AccommodationLocation"
+						},
+						"title": "Offer location",
+						"type": "array"
+					},
+					"isExternal": {
+						"title": "Whether the offer is external",
+						"type": "boolean"
+					}
+				},
+				"title": "Supplier specific extra information."
+			}
+		},
+		"securitySchemes": {
+			"BearerAuth": {
+				"bearerFormat": "JWT",
+				"description": "[Deprecated] Use Api-Key instead.",
+				"scheme": "bearer",
+				"type": "http"
+			},
+			"ApiKeyAuth": {
+				"description": "API key for technical authentication of Nezasa with the integration partner. \nIssued by the integration partner.",
+				"in": "header",
+				"name": "Api-Key",
+				"type": "apiKey"
+			}
+		}
+	}
+}

@@ -1,0 +1,520 @@
+openapi: 3.0.3
+info:
+  title: Inventory Supplier API
+  version: '1.0'
+  description: |
+    The Inventory Supplier API allows CRUD (Create, Read, Update and Delete) functionality for the
+    supplier contacts used in the TripBuilder Inventory. The API can be used to manage suppliers in
+    the TripBuilder Cockpit either by the Cockpit frontend itself or by 3rd party clients who use
+    the API to import supplier contact information into TripBuilder.
+
+    # Security
+    The API needs to be accessed using a form of authentication. 3rd party clients shall use the
+    BasicAuth scheme to authenticate and access the API using the host api.tripbuilder.app. Nezasa's own
+    frontends can use the existing Cookie-based authentication using the ID session cookie and also
+    access the API in Cockpit using <companyid>.tripbuilder.app.
+  contact:
+    email: support@nezasa.com
+    url: https://www.nezasa.com
+servers:
+  - url: /inventory/api/{companyId}
+    variables:
+      companyId:
+        default: Nezasa
+paths:
+  /supplier:
+    get:
+      summary: Lists supplier contacts.
+      description: Lists all supplier contacts for a tour operator.
+      operationId: getSupplier
+      responses:
+        '200':
+          description: Returns an array of supplier contacts with its details.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupplierContactResponse'
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+    post:
+      summary: Create a supplier contact.
+      description: Creates a new supplier contact.
+      operationId: postSupplier
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierContactCreateRequest'
+        required: true
+      responses:
+        '200':
+          description: Returns the created supplier contact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierContactResponse'
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+  /supplier/{contactIdParam}:
+    get:
+      summary: Get single supplier contact.
+      description: Gets the details of a single supplier contact.
+      operationId: getSupplierContactidparam
+      parameters:
+        - name: contactIdParam
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description:
+            Returns the details of a single supplier contact possibly a
+            meta object holding addition information and/or warnings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierContactResponse'
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+    delete:
+      summary: Delete a supplier contact.
+      description: Deletes a supplier contact identified by its id.
+      operationId: deleteSupplierContactidparam
+      parameters:
+        - name: contactIdParam
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '409':
+          description: |
+            The supplier contact could not be deleted because of a foreign key constraint violation.
+            The supplier contact is used in some inventory products and can therefore not be
+            deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+    patch:
+      summary: Update a supplier contact.
+      description: Update an existing supplier contact.
+      operationId: patchSupplierContactidparam
+      parameters:
+        - name: contactIdParam
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierContactUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: Returns an object containing the updated supplier contact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierContactResponse'
+        '400':
+          description: The request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: The travel agency could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '412':
+          description: The company could not be found. Tenant cannot be associated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+components:
+  schemas:
+    ExternalReference:
+      required:
+        - externalRefId
+        - externalSystemId
+      type: object
+      properties:
+        externalRefId:
+          type: string
+          description: The identifier of the owning entity in the external system
+        externalSystemId:
+          type: string
+          description:
+            'The external system. Used to identify the external system.
+            Supported values are: - Midoco (for suppliers mapped to Midoco) - SoftConEx
+            (for agencies mapped to SoftConEx) - TourOperatorProductCode (for suppliers
+            mapped to 3rd party tour operator systems)'
+      description:
+        The external reference maps the an entity in TripBuilder with an
+        entity in an external system.
+    Level:
+      type: string
+      description: The severity of the problem
+      enum:
+        - ERROR
+        - WARNING
+        - INFO
+    Problem:
+      required:
+        - code
+        - detail
+        - level
+      type: object
+      properties:
+        code:
+          type: string
+          description: A specific code narrowing the type of Problem down
+        detail:
+          type: string
+          description:
+            A human readable explanation (localized to the language of
+            the user) of this problem
+        level:
+          $ref: '#/components/schemas/Level'
+        source:
+          $ref: '#/components/schemas/ProblemSource'
+      description:
+        A Problem object inspired by https://tools.ietf.org/html/rfc7807
+        (Problem Details for HTTP APIs)
+    ProblemResponse:
+      required:
+        - status
+      type: object
+      properties:
+        status:
+          type: integer
+          description: The HTTP status code generated for this problem response
+          format: int32
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/Problem'
+      description: An array of Problem objects
+    ProblemSource:
+      required:
+        - pointer
+      type: object
+      properties:
+        pointer:
+          type: string
+          description:
+            A reference to the associated entity in the request document
+            which caused the problem
+      description: An object containing references to the source of the error
+    SupplierContactCountry:
+      required:
+        - isoCode
+      type: object
+      properties:
+        isoCode:
+          type: string
+          description: the 2-letter ISO code of the country
+        name:
+          type: string
+          description:
+            the default name of the country. This information is returned
+            for convenience of a frontend application  only in case a country name
+            needs to be shown in the UI. For the reference in the data model the `isoCode`
+            is sufficient. The Update or Create only requires the `isoCode`, name
+            field is not needed.
+        localizedName:
+          type: string
+          description:
+            the localized name in different locales. This information is
+            returned for convenience of a frontend application only in case a country
+            name needs to be shown in the UI. For the reference in the data model
+            the `isoCode` is sufficient. The Update or Create only requires the `isoCode`,
+            name field is not needed.
+      description: Information about a country (name, country code, etc.)
+    SupplierContactCountryRequest:
+      required:
+        - isoCode
+      type: object
+      properties:
+        isoCode:
+          type: string
+          description: the 2-letter ISO code of the country
+      description: Information about a country
+    SupplierContactCreateRequest:
+      required:
+        - name
+        - country
+        - email
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the supplier contact
+        address1:
+          type: string
+          description: Address line 1 of the supplier contact
+        address2:
+          type: string
+          description: Address line 2 of the supplier contact
+        city:
+          type: string
+          description: City in which the supplier contact is located
+        zip:
+          type: string
+          description: Zip code of the city in which the supplier contact is located
+        country:
+          $ref: '#/components/schemas/SupplierContactCountryRequest'
+        phone:
+          type: string
+          description:
+            The phone number including international prefix of the supplier
+            contact.
+        email:
+          type: string
+          description:
+            The email address of the supplier contact used for B2B operations.
+            Automated mail notifications sent by the system are sent to this address.
+        doNotNotify:
+          type: boolean
+          description:
+            Whether to suppress automated mail notifications that shall
+            be sent to the email address configured in the attribute `email`.
+        supportPhone:
+          type: string
+          description:
+            The phone number used for traveller support including international
+            prefix of the supplier contact.
+        supportEmail:
+          type: string
+          description: The email address used for traveller support.
+        comment:
+          type: string
+          description: Free, internal text comment about the supplier
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          description:
+            External references of a supplier contact in 3rd party systems.
+            This can be used by automated import or syncs with external system. The
+            importer can provide the ID of the supplier contact in the external system
+            and use this for later reference.
+        archived:
+          type: boolean
+          description: Used to inactivate a contact.
+      description: To create a new supplier contact
+    SupplierContactResponse:
+      required:
+        - refId
+        - name
+        - country
+        - email
+      type: object
+      properties:
+        refId:
+          type: string
+          description: The unique id of the supplier contact
+        contactType:
+          type: string
+          description:
+            Deprecated attribute Type of the contact. Do no longer use
+            this attribute. Only supported for backward compatibility reasons.
+        name:
+          type: string
+          description: Name of the supplier contact
+        address1:
+          type: string
+          description: Address line 1 of the supplier contact
+        address2:
+          type: string
+          description: Address line 2 of the supplier contact
+        city:
+          type: string
+          description: City in which the supplier contact is located
+        zip:
+          type: string
+          description: Zip code of the city in which the supplier contacted is located
+        country:
+          $ref: '#/components/schemas/SupplierContactCountry'
+        phone:
+          type: string
+          description:
+            The phone number including international prefix of the supplier
+            contact.
+        email:
+          type: string
+          description:
+            The email address of the supplier contact used for B2B operations.
+            Automated mail notifications sent by the system are sent to this address.
+        doNotNotify:
+          type: boolean
+          description:
+            Whether to suppress automated mail notifications that shall
+            be sent to the email address configured in the attribute `email`.
+        supportPhone:
+          type: string
+          description:
+            The phone number used for traveller support including international
+            prefix of the supplier contact.
+        supportEmail:
+          type: string
+          description: The email address used for traveller support.
+        comment:
+          type: string
+          description: Free, internal text comment about the supplier
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          description:
+            External references of a supplier contact in 3rd party systems.
+            This can be used by automated import or syncs with external system. The
+            importer can provide the ID of the supplier contact in the external system
+            and use this for later reference.
+      description: The supplier contact details
+    SupplierContactUpdateRequest:
+      required:
+        - name
+        - country
+        - email
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the supplier contact
+        address1:
+          type: string
+          description: Address line 1 of the supplier contact
+        address2:
+          type: string
+          description: Address line 2 of the supplier contact
+        city:
+          type: string
+          description: City in which the supplier contact is located
+        zip:
+          type: string
+          description: Zip code of the city in which the supplier contact is located
+        country:
+          $ref: '#/components/schemas/SupplierContactCountryRequest'
+        phone:
+          type: string
+          description:
+            The phone number including international prefix of the supplier
+            contact.
+        email:
+          type: string
+          description:
+            The email address of the supplier contact used for B2B operations.
+            Automated mail notifications sent by the system are sent to this address.
+        doNotNotify:
+          type: boolean
+          description:
+            Whether to suppress automated mail notifications that shall
+            be sent to the email address configured in the attribute `email`.
+        supportPhone:
+          type: string
+          description:
+            The phone number used for traveller support including international
+            prefix of the supplier contact.
+        supportEmail:
+          type: string
+          description: The email address used for traveller support.
+        comment:
+          type: string
+          description: Free, internal text comment about the supplier contact.
+        externalReferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          description:
+            External references of a supplier contact in 3rd party systems.
+            This can be used by automated import or syncs with external system. The
+            importer can provide the ID of the supplier contact in the external system
+            and use this for later reference.
+        archived:
+          type: boolean
+          description: Used to inactivate a contact.
+      description: To update an existing supplier contact
+  securitySchemes:
+    httpAuth:
+      type: http
+      scheme: basic
+security:
+  - httpAuth: []

@@ -8,7 +8,7 @@ info:
     the payment transaction part of the Booking API.
 
     ## Doc Version
-    Last Updated: 2023-12-19
+    Last Updated: 2024-10-11
 
     ## Compression
     All endpoints in the API support gzip compression for both request and response payloads. Most 
