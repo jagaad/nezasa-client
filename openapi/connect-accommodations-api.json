@@ -492,6 +492,28 @@
 			"delete": {
 				"description": "Cancels a reservation for a given booking reference. The booking reference is\nreturned by the book response. The integration partner must use this reference to\nuniquely identify and cancel the booking. If the booking consists of more that one\nroom, the integration partner must cancel each room individually.",
 				"operationId": "AccommodationsV1_Cancel",
+				"parameters": [
+					{
+						"description": "For tracking and debugging, we will include a tracing header with every request. This\ntrace ID follows the W3C Trace Context standard. Users can see this same header in the\nTrip Builder API responses and match it with data in the Supplier system if needed.",
+						"in": "header",
+						"name": "traceparent",
+						"required": false,
+						"schema": {
+							"example": "00-666b4b3800000000089918a4bf7e8d29-40eeac6740412d3f-01",
+							"type": "string"
+						}
+					},
+					{
+						"description": "An identifier of the contract to differentiate configuration, options or settings.\nNo other configuration parameter will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"required": true,
+						"schema": {
+							"example": "nicetours, 123456",
+							"type": "string"
+						}
+					}
+				],
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -2874,6 +2896,10 @@
 				"description": "Books the accommodation offer if available. Use the offer reference provided \nby the `AccommodationAvailabilityRequest`.",
 				"example": {
 					"reference": "reference",
+					"metadata": {
+						"itineraryId": "1xinmvo5skro",
+						"agencyId": "ABC12345"
+					},
 					"roomAllocation": [
 						{
 							"reference": 1,
@@ -3136,6 +3162,9 @@
 					},
 					"contact": {
 						"$ref": "#/components/schemas/CommonContactDetails"
+					},
+					"metadata": {
+						"$ref": "#/components/schemas/Metadata"
 					}
 				},
 				"required": ["contact", "lang", "roomAllocation"],
@@ -4149,6 +4178,28 @@
 						"type": "string"
 					}
 				},
+				"type": "object"
+			},
+			"Metadata": {
+				"example": {
+					"itineraryId": "1xinmvo5skro",
+					"agencyId": "ABC12345"
+				},
+				"properties": {
+					"itineraryId": {
+						"description": "ID of the planned trip. Will be the same for all bookings made for this trip.",
+						"example": "1xinmvo5skro",
+						"title": "Nezasa ID of the itinerary.",
+						"type": "string"
+					},
+					"agencyId": {
+						"description": "Customer has an option in Trip Builder to configure Supplier specific Agency ID. If configured, the ID is provided here.",
+						"example": "ABC12345",
+						"title": "Supplier specific Agency ID.",
+						"type": "string"
+					}
+				},
+				"required": ["itineraryId"],
 				"type": "object"
 			},
 			"AccommodationBooking": {

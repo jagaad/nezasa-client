@@ -118,7 +118,6 @@ info:
     | 1.0         | 22.10.2024   | Added support for wildcard tags in itinerary include parameter                                      |
     | 1.0         | 23.10.2024   | Added support returning the travel agency ref id as part of the ItineraryResponse                                      |
     | 1.0         | 06.11.2024   | Added activityType for ad hoc activities                                     |
-    | 1.0         | 28.11.2024   | Added support for accommodation retrieval on ad hoc accommodations requests                                                                  |
 
     # Authentication
     Authenticate your account when using the API by including your secret API key in the request.
@@ -1846,37 +1845,6 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/accommodation-ad-hoc-components-v2:
-    post:
-      summary: Add ad-hoc accommodation
-      description: |
-        Adds a new accommodation ad-hoc component to the itinerary
-      tags:
-        - Ad-Hoc
-      produces:
-        - application/json
-      parameters:
-        - $ref: '#/parameters/versionParam'
-        - $ref: '#/parameters/itineraryIdParam'
-        - name: data
-          description: |
-            The request contains the accommodation ad-hoc component information used to create
-            and insert them into the itinerary.
-          in: body
-          schema:
-            $ref: '#/definitions/AccommodationAdHocComponentUpsertRequest'
-      responses:
-        200:
-          description: |
-            Returns an AccommodationAdHocComponentsResponse object containing the updated AhHoc Accommodation as well as a meta
-            object holding additional information and/or warnings
-          schema:
-            $ref: '#/definitions/AccommodationAdHocComponentsResponse'
-        400:
-          description: The request was invalid
-          schema:
-            $ref: '#/definitions/ProblemResponse'
-
   /{itineraryId}/accommodation-ad-hoc-components/{componentRefId}:
     put:
       summary: Update ad-hoc accommodation
@@ -1933,38 +1901,6 @@ paths:
         404:
           description: |
             The ad-hoc accommodation component with the given refId does not exist
-          schema:
-            $ref: '#/definitions/ProblemResponse'
-
-  /{itineraryId}/accommodation-ad-hoc-components-v2/{componentRefId}:
-    put:
-      summary: Update ad-hoc accommodation
-      description: |
-        Updates an accommodation ad-hoc component in the itinerary
-      tags:
-        - Ad-Hoc
-      produces:
-        - application/json
-      parameters:
-        - $ref: '#/parameters/versionParam'
-        - $ref: '#/parameters/itineraryIdParam'
-        - $ref: '#/parameters/componentRefIdParam'
-        - name: data
-          description: |
-            The request contains the accommodation ad-hoc component information used to replace
-            the existing one
-          in: body
-          schema:
-            $ref: '#/definitions/AccommodationAdHocComponentUpsertRequest'
-      responses:
-        200:
-          description: |
-            Returns an AccommodationAdHocComponentsResponse object containing the updated AhHocAccommodation as well as a meta
-            object holding addition information and/or warnings
-          schema:
-            $ref: '#/definitions/AccommodationAdHocComponentsResponse'
-        400:
-          description: The request was invalid
           schema:
             $ref: '#/definitions/ProblemResponse'
 
@@ -4112,6 +4048,7 @@ definitions:
         enum: *BookingStatus
         description: |
           The state of the booking
+
   OccupancyBasedActivityRoomDimensionUpsertRequest:
     type: object
     required:

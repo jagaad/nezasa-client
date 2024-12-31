@@ -3,11 +3,13 @@
 	"version": "0.4.1",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 0",
-		"release": "np",
-		"generate": "./scripts/generate-api-types.sh",
+		"postdownload": "prettier --write --ignore-unknown openapi",
 		"postgenerate": "prettier --write --ignore-unknown types",
 		"prebuild": "npm run generate",
-		"build": "tsup"
+		"download": "./scripts/download.sh",
+		"generate": "./scripts/generate-api-types.sh",
+		"build": "tsup",
+		"release": "np"
 	},
 	"repository": {
 		"type": "git",

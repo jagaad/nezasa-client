@@ -14,6 +14,7 @@ export const WebhookEventEnum = {
 	booking_change_requested: 'booking_change_requested',
 	booking_change_completed: 'booking_change_completed',
 	booking_change_booking_failed: 'booking_change_booking_failed',
+	booking_change_cancellation_failed: 'booking_change_cancellation_failed',
 
 	pax_changed: 'pax_changed',
 

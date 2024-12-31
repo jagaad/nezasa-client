@@ -25,25 +25,26 @@ info:
 
     Available events are:
 
-    Name | Description
-    ----------------------------|-------------
-    `booking_completed`             | Triggered after booking of an itinerary has completed.
-    `booking_requested`             | Triggered when booking has been requested but could not be completed. We have started booking, however, for some reason could not complete the operation automatically and require manual intervention.
-    `booking_failed`                | Triggered after a full or partial booking failure occurs.    
-    `cancellation_completed`        | Triggered after cancellation of an itinerary has completed.
-    `booking_change_initiated`      | Triggered after a booking change has been initiated and an alternative itinerary has been created.
-    `booking_change_completed`      | Triggered after a booking change has been completed.
-    `booking_change_requested`      | Triggered when a booking change has been requested but could not be completed. We have started booking (changed components), however, for some reason could not complete the operation automatically and require manual intervention.
-    `booking_change_booking_failed` | Triggered when the booking of one or more components has failed during a booking change.
-    `booking_modified`              | Triggered when a booking had been modified.
-    `pax_changed`                   | Triggered after some PAX information changed (e.g. name changed). This can happen if a correction has to be made. A PAX change that impacts the structure of the booking (e.g. PAX added/removed) must trigger a booking change event and not this event here.
-    `payment_added`                 | Triggered after a payment is added.
-    `payment_closed`                | Triggered after a payment is closed.
-    `payment_deleted`               | Triggered after a payment is deleted.
-    `refund_added`                  | Triggered after a refund is added.
-    `refund_closed`                 | Triggered after a refund is closed.
-    `refund_deleted`                | Triggered after a refund is deleted.
-    `ping`                          | Triggered when a new webhook is added or an existing webhook is updated. Useful for development / testing purpose only; can be ignored in production.
+    Name                                  | Description
+    --------------------------------------|-------------
+    `booking_completed`                   | Triggered after booking of an itinerary has completed.
+    `booking_requested`                   | Triggered when booking has been requested but could not be completed. We have started booking, however, for some reason could not complete the operation automatically and require manual intervention.
+    `booking_failed`                      | Triggered after a full or partial booking failure occurs.    
+    `cancellation_completed`              | Triggered after cancellation of an itinerary has completed.
+    `booking_change_initiated`            | Triggered after a booking change has been initiated and an alternative itinerary has been created.
+    `booking_change_completed`            | Triggered after a booking change has been completed.
+    `booking_change_requested`            | Triggered when a booking change has been requested but could not be completed. We have started booking (changed components), however, for some reason could not complete the operation automatically and require manual intervention.
+    `booking_change_booking_failed`       | Triggered when the booking of one or more components has failed during a booking change.
+    `booking_change_cancellation_failed`  | Triggered when the cancellation of one or more components failed during a booking change.
+    `booking_modified`                    | Triggered when a booking had been modified.
+    `pax_changed`                         | Triggered after some PAX information changed (e.g. name changed). This can happen if a correction has to be made. A PAX change that impacts the structure of the booking (e.g. PAX added/removed) must trigger a booking change event and not this event here.
+    `payment_added`                       | Triggered after a payment is added.
+    `payment_closed`                      | Triggered after a payment is closed.
+    `payment_deleted`                     | Triggered after a payment is deleted.
+    `refund_added`                        | Triggered after a refund is added.
+    `refund_closed`                       | Triggered after a refund is closed.
+    `refund_deleted`                      | Triggered after a refund is deleted.
+    `ping`                                | Triggered when a new webhook is added or an existing webhook is updated. Useful for development / testing purpose only; can be ignored in production.
 
     # Payloads
     For details about the booking fields refer to the Booking API specification: https://support.nezasa.com/hc/en-gb/articles/4405877436817-Nezasa-APIs
