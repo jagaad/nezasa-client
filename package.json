@@ -1,6 +1,6 @@
 {
 	"name": "@jagaad/nezasa-client",
-	"version": "0.4.1",
+	"version": "0.4.2",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 0",
 		"postdownload": "prettier --write --ignore-unknown openapi",
