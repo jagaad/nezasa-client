@@ -53,6 +53,7 @@ info:
     The event payload for the `booking_requested`, `booking_completed`, `booking_change_completed` and `booking_failed` events is identical, except for the eventType field's value:
 
     Example:
+    Example for reseller webhooks (reseller = true):
     ```
     {
       "eventType": "booking_completed"
@@ -60,6 +61,24 @@ info:
         "url": "https://api.tripbuilder.app/bookings/v1.13/idwegwefdwdt"
         "tourOperator": "TO",
         "distributionChannel": "TO-DC",
+        "refId": "idwegwefdwdt",
+        "externalCaseId": "73259968",
+        "externalRefId": "IBP2V",
+        "bookingType": "Booking",
+        "bookingState": "BookingCompleted"
+      }
+    }
+    ```
+
+    Example for non-reseller webhooks (reseller = false):
+    ```
+    {
+      "eventType": "booking_completed"
+      "booking": {
+        "url": "https://api.tripbuilder.app/bookings/v1.13/idwegwefdwdt"
+        "tourOperator": "TO",
+        "distributionChannel": "TO-DC",
+        "seller": "seller-id",
         "refId": "idwegwefdwdt",
         "externalCaseId": "73259968",
         "externalRefId": "IBP2V",

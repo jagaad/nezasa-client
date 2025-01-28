@@ -44,7 +44,7 @@ curl https://docs.tripbuilder.app/Mo9reezaehiengah/payment-transaction-api.yaml 
 # https://support.nezasa.com/hc/en-gb/articles/23104208261777-Template-API
 curl https://docs.tripbuilder.app/Mo9reezaehiengah/template-api-v1.yaml -o openapi/template-api-v1.yaml
 
-# Manual download
-# https://support.nezasa.com/hc/en-gb/articles/28315401569297-Connect-API-Accommodations
-# https://support.nezasa.com/hc/en-gb/articles/28414297178001-Connect-API-Activities
-# https://support.nezasa.com/hc/en-gb/articles/28415398291601-Connect-API-Transports
+printf "\nManual download\n"
+echo https://support.nezasa.com/hc/en-gb/articles/28315401569297-Connect-API-Accommodations
+echo https://support.nezasa.com/hc/en-gb/articles/28414297178001-Connect-API-Activities
+echo https://support.nezasa.com/hc/en-gb/articles/28415398291601-Connect-API-Transports

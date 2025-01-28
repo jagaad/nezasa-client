@@ -74,16 +74,6 @@ info:
     3. If none of the languages from step (1) satisfies any of the the distribution channel's supported languages,
        then we either take the first language from the list from step (1) or we default to EN.
 
-    ### Currency
-    The currency is determined similarly to how the language localization parameter is set. First the
-    "currency" Cookie is checked and if a value exist, we verify if this value is supported by the
-    distribution channel. If it is supported, then the value from the currency Cookie is used, otherwise the
-    default user currency value configured on the distribution channel is taken.
-
-    If no currency Cookie exists, then we try looking up the currency using the first language in the
-    "Accept-Language" header. If this currency is supported by the distribution channel, then it is taken as
-    the user currency, otherwise, we simply default to the user currency configured on the distribution channel.
-
     ## Timeouts
     The Planner API has a general request timeout of 30 seconds. If a request cannot be served within this time a
     HTTP error 503 is returned and the connection is closed by the server.
@@ -207,6 +197,9 @@ components:
         taxNumber:
           type: string
           nullable: true
+        localIdNumber:
+          type: string
+          nullable: true
 
     PaxInfo:
       type: object
@@ -257,16 +250,36 @@ components:
       type: object
       required:
         - offerId
+        - productId
         - name
         - description
+        - pictures
         - serviceCategories
       properties:
         offerId:
+          type: string
+        productId:
           type: string
         name:
           type: string
         description:
           type: string
+        pictures:
+          description: A list of URLs to pictures of the upsell item offer
+          type: array
+          items:
+            type: object
+            description: The picture for the upsell item offer
+            required:
+              - url
+              - thumbnail
+            properties:
+              caption:
+                type: string
+              url:
+                type: string
+              thumbnail:
+                type: string
         serviceCategories:
           type: array
           items:
@@ -277,11 +290,14 @@ components:
       required:
         - serviceCategoryRefId
         - name
+        - priceType
         - salesPrice
       properties:
         serviceCategoryRefId:
           type: string
         name:
+          type: string
+        priceType:
           type: string
         salesPrice:
           $ref: '#/components/schemas/MonetaryValue'
@@ -310,6 +326,8 @@ components:
         Includes pricing information, supplier details, and booking status.
       required:
         - componentRefId
+        - productRefId
+        - serviceCategoryRefId
         - name
         - netPrice
         - salesPrice
@@ -318,6 +336,12 @@ components:
         componentRefId:
           type: string
           description: The component unique identifier
+        productRefId:
+          type: string
+          description: The product unique identifier
+        serviceCategoryRefId:
+          type: string
+          description: The service category ref ID
         name:
           type: string
           description: The name of the Upsell Item
@@ -555,25 +579,13 @@ components:
           type: string
           description: The id that can be used to identify this travel agency in our system
 
-    OptIns:
-      type: object
-      required:
-        - optIns
-      properties:
-        contactInfo:
-          type: object
-          description: The contact information for the user
-          properties:
-            email:
-              type: string
-              description: The user email to opt-in to marketing communications
-        optIns:
-          type: array
-          items:
-            $ref: '#/components/schemas/OptInChannel'
-
     OptInChannel:
       type: object
+      description: |
+        Represents a specific opt-in channel and its consent status. Currently only supports newsletter opt-ins
+        via email channel. While the schema is designed for future expansion, at present:
+        - Only Newsletter type is supported
+        - Only email channel is supported
       required:
         - type
         - consent
@@ -581,12 +593,50 @@ components:
       properties:
         type:
           type: string
+          description: |
+            The type of opt-in. Currently only supports Newsletter, but designed for future expansion
+            to accommodate additional opt-in types.
           enum:
             - Newsletter
         consent:
           type: boolean
+          description: Whether the user has given consent for this opt-in channel
         channel:
           type: string
+          description: |
+            The channel for this opt-in. Currently only 'email' is supported.
+            Value is case-insensitive.
+
+    OptInsContactInfo:
+      type: object
+      description: |
+        Contact information specifically for opt-ins. Required when giving consent to certain
+        opt-in types (e.g., email is required for Newsletter type).
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address for the opt-in contact. Required for Newsletter type.
+
+    OptIns:
+      type: object
+      description: |
+        Container for opt-in preferences and associated contact information.
+
+        ## Limitations
+        - Each opt-in type can only appear once in the list
+        - For Newsletter type, email contact information is required when consent is true
+        - Removing consent (setting to false) does not require contact information
+      required:
+        - optIns
+      properties:
+        optIns:
+          type: array
+          description: List of opt-in channels and their consent status
+          items:
+            $ref: '#/components/schemas/OptInChannel'
+        contactInfo:
+          $ref: '#/components/schemas/OptInsContactInfo'
 
     TermsAndConditions:
       type: object
@@ -670,6 +720,7 @@ components:
       required:
         - refId
         - checkoutState
+        - bookingWindowEnd
         - termsAndConditions
         - itinerary
         - travelerDetails
@@ -689,6 +740,13 @@ components:
         externalBookingId:
           type: string
           description: The external booking ID, if any
+        bookingWindowEnd:
+          description: |
+            The end of the booking window for the itinerary. This is the latest date
+            the itinerary can be booked.
+          type: string
+          format: date
+          example: '2017-12-31'
         termsAndConditions:
           $ref: '#/components/schemas/TermsAndConditions'
         itinerary:
@@ -908,6 +966,9 @@ components:
         - status
         - nonBookable
         - price
+        - isBooked
+        - isOnRequest
+        - isPlaceholder
       properties:
         id:
           description: |
@@ -976,6 +1037,10 @@ components:
           description: |
             A localized name representing the component, e.g., the hotel or activity name.
           type: string
+        serviceLevelName:
+          description: |
+            A localized name representing the service level of the component, e.g., the hotel room.
+          type: string
         startDate:
           description: |
             A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
@@ -999,6 +1064,18 @@ components:
             useful if a component is nonBookable. Add a `goto` query param to this url so if a
             redirect back is needed.
           type: string
+        isBooked:
+          description: |
+            Whether the component is currently booked or not.
+          type: boolean
+        isOnRequest:
+          description: |
+            Whether the component is currently on request or not.
+          type: boolean
+        isPlaceholder:
+          description: |
+            Whether the component is currently a placeholder or not.
+          type: boolean
 
     AvailabilityCheckResponse:
       type: object
@@ -1024,11 +1101,13 @@ components:
 
     StartBookingResponse:
       type: object
-      required:
-        - status
       properties:
         status:
           type: string
+        itinerary:
+          $ref: '#/components/schemas/Itinerary'
+        summary:
+          $ref: '#/components/schemas/AvailabilitySummary'
 
     TravelerDetails:
       type: object
@@ -1128,6 +1207,16 @@ components:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
             passportIssuingCountry:
               $ref: '#/components/schemas/RequiredTravelerFieldType'
+            address1:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            address2:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            postalCode:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            city:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
+            country:
+              $ref: '#/components/schemas/RequiredTravelerFieldType'
 
     RequiredTravelerFieldType:
       type: string
@@ -1146,8 +1235,11 @@ components:
       required:
         - name
         - value
+        - productName
       properties:
         name:
+          type: string
+        productName:
           type: string
         value:
           $ref: '#/components/schemas/MonetaryValue'
@@ -1445,28 +1537,14 @@ components:
       content:
         application/json:
           schema:
-            type: object
-            required:
-              - itinerary
-              - summary
-            properties:
-              itinerary:
-                $ref: '#/components/schemas/Itinerary'
-              summary:
-                $ref: '#/components/schemas/AvailabilitySummary'
+            $ref: '#/components/schemas/BookingResponse'
 
     StartBookingResponse:
       description: Booking response
       content:
         application/json:
           schema:
-            type: object
-            required:
-              - itinerary
-              - summary
-            properties:
-              status:
-                type: string
+            $ref: '#/components/schemas/StartBookingResponse'
 
     PricesResponse:
       description: Prices response
@@ -2380,15 +2458,10 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                answers:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/OptIns'
+              $ref: '#/components/schemas/OptIns'
       responses:
         '200':
-          $ref: '#/components/responses/ActivityQuestionsResponse'
+          $ref: '#/components/responses/OptInsResponse'
         '400':
           $ref: '#/components/responses/ProblemResponseError'
         '404':
@@ -2410,10 +2483,8 @@ paths:
             type: string
       responses:
         '200':
-          $ref: '#/components/responses/ActivityQuestionsResponse'
+          $ref: '#/components/responses/OptInsResponse'
         '400':
-          $ref: '#/components/responses/ProblemResponseError'
-        '404':
           $ref: '#/components/responses/ProblemResponseError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'

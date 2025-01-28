@@ -12,7 +12,7 @@ info:
 
     ## Doc Version
 
-    Last Updated: 2024-12-02
+    Last Updated: 2025-01-06
 
     ## Compression
 
@@ -108,6 +108,7 @@ info:
     | 1.0         | 05.11.2024   | Added `agencyRefId` to the `FromPullPnrRequest` schema, it is now possible to enter the travel agency id which creates an itinerary |
     | 1.0         | 29.11.2024   | The from-scratch endpoint now supports passing the transport means for the incoming connection of a leg/stop skeleton |
     | 1.0         | 02.12.2024   | Fixed up allocated pax in example for pull-pnr |
+    | 1.0         | 06.01.2025   | New endpoint `POST /magiclink` |
 
     # Authentication
 
@@ -589,8 +590,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /magiclink:
+    post:
+      summary: Generates auto-auth magic links for agency accesses
+      description: |
+        This secured API endpoint can only be called by a tour operator user to create a magic link for
+        an agency. The returned magic link will contain the URL to be accessed together with an authentication
+        token to automatically log in the agency. The token is valid for one hour.
+
+        This endpoint triggers the generation of a magic link for authentication purposes.
+
+        **Sample Sequence of Use Case Events:**
+
+        1. **Agent User** initiates an action (e.g., button click) in the External Application (e.g., CRS).
+        2. **External App** sends a request to the **Itinerary API** to obtain a magic link for the TripBuilder URL. 
+             This needs to be an authenticated call, using the technical API user of the tour operator.
+        3. **Itinerary API** returns the magic link along with an authentication token back to the **External App**.
+        4. **External App** redirects the user to the magic link.
+        5. **TripBuilder** authenticates the agency automatically thanks to the token which is part of the magic link.
+        6. **TripBuilder** displays the interface to the user as per TripBuilder URL for which the magic link was created.
+
+        Remarks:
+
+        - **URL Parameters:** Include the URL parameters required by the target URL in the input target URL.
+        - **Input validation:** The endpoint performs security validations if the tour operator user is allowed 
+            to generate the magic link. The endpoint doesn't validate in any form the target URL (hint: will be 
+            performed by the target URL's implementation).
+        - **Tour Operator, Distribution Channel**: the domain of the magic link API endpoint and the target URL
+            need to match because of security reasons. The determines the tour operator and the distribution channel
+            from it.
+
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/MagicLinkRequest'
+        required: true
+      responses:
+        '200':
+          description: |
+            Returns the magic link, i.e., the target URL together with an authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MagicLinkResponse'
+        '400':
+          description: The magic link could not be created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The agency referenced doesn't exist or the authenticated API user has no access to it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-codegen-request-body-name: body
+
 components:
   schemas:
+    MagicLinkRequest:
+      type: object
+      required:
+        - targetUrl
+        - agencyRefId
+      properties:
+        targetUrl:
+          type: string
+          description: |
+            The target URL. Supports relative and absolute URLs. If a relative URL was used as input,
+            the endpoint will return a relative URL as output, and vice versa.
+          example: /planner-copilot?q=3%20days%20italy
+        agencyRefId:
+          type: string
+          description: The ID of the agency for which to create the magic link.
+          example: agency123
+
+    MagicLinkResponse:
+      type: object
+      required:
+        - magicLinkUrl
+      properties:
+        magicLinkUrl:
+          type: string
+          description: |
+            The target URL including the authentication token. The URL is relative if the input target URL
+            was relative, and absolute if the input target URL was absolute.
+          example: /auth/token?t=HfjhzGr9NXxenLAiaJdijqvmfRJqVw8dwieKMccRwZET0UvhziNqc9zOVDZ3Tt3hze59fNHayYsk&nz-redirect=%252Fplanner-copilot%253Fq%253D3%252520days%252520italy
+        creationTime:
+          type: string
+          description: ISO-formatted timestamp when the token was created.
+          example: 2025-01-01T10:00:00.000Z
+        expirationTime:
+          type: string
+          description: ISO-formatted timestamp when the token will expire.
+          example: 2025-01-01T11:00:00.000Z
+
     FromPullPnrRequest:
       type: object
       description: Pull PNR Itinerary Request
@@ -1177,6 +1274,18 @@ components:
             `giata`. One of the two needs to be provided.
     ClientMeta:
       type: object
+      description: |
+        An object that defines the meta attributes used for the CRS use case. These are the CRS client that is used,
+        the action performed in the CRS client, and the travel agency identifier. See Nezasa Booking API for more
+        details about the meta attributes for CRS.
+
+        Required for the CRS use case. Or in different words: if this attribute is set this defines that the caller
+        is in a CRS integration use case and the response will deliver attributes required for CRS use cases (such
+        as the URL that can be used as Alias Link in the CRS).
+      required:
+        - client
+        - clientAction
+        - agency
       properties:
         client:
           type: string
@@ -1187,14 +1296,26 @@ components:
         agency:
           type: string
           example: '107949'
+        atcom:
+          $ref: '#/components/schemas/AtcomClientMetaPayload'
+    AtcomClientMetaPayload:
+      type: object
       description: |
-        An object that defines the meta attributes used for the CRS use case. These are the CRS client that is used,
-        the action performed in the CRS client, and the travel agency identifier. See Nezasa Booking API for more
-        details about the meta attributes for CRS.
-
-        Required for the CRS use case. Or in different words: if this attribute is set this defines that the caller
-        is in a CRS integration use case and the response will deliver attributes required for CRS use cases (such
-        as the URL that can be used as Alias Link in the CRS).
+        The optional meta payload of the client meta in case the client is Atcom. 
+        Make sure to set the `client` attribute to `atcom` in this case.
+      required:
+        - callbackUrl
+        - basketKey
+        - stateId
+      properties:
+        callbackUrl:
+          type: string
+        basketKey:
+          type: string
+        stateId:
+          type: string
+        bookingReference:
+          type: string
     ExternalCustomerId:
       type: string
       description: |

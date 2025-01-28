@@ -8,7 +8,7 @@ info:
     JSON is returned by all API responses including errors.
 
     ## Doc Version
-    Last Updated: 2024-11-06
+    Last Updated: 2024-12-18
 
     ## Compression
     All endpoints in the REST API support gzip compression for both request and response payloads. Most client side
@@ -34,16 +34,6 @@ info:
 
     3. If none of the languages from step (1) satisfies any of the the distribution channel's supported languages,
        then we either take the first language from the list from step (1) or we default to EN.
-
-    ### Currency
-    The currency is determined similarly to how the language localization parameter is set. First the
-    "currency" Cookie is checked and if a value exist, we verify if this value is supported by the
-    distribution channel. If it is supported, then the value from the currency Cookie is used, otherwise the
-    default user currency value configured on the distribution channel is taken.
-
-    If no currency Cookie exists, then we try looking up the currency using the first language in the
-    "Accept-Language" header. If this currency is supported by the distribution channel, then it is taken as
-    the user currency, otherwise, we simply default to the user currency configured on the distribution channel.
 
     ## Timeouts
     The Planner API has a general request timeout of 30 seconds. If a request cannot be served within this time a
@@ -118,6 +108,10 @@ info:
     | 1.0         | 22.10.2024   | Added support for wildcard tags in itinerary include parameter                                      |
     | 1.0         | 23.10.2024   | Added support returning the travel agency ref id as part of the ItineraryResponse                                      |
     | 1.0         | 06.11.2024   | Added activityType for ad hoc activities                                     |
+    | 1.0         | 28.11.2024   | Added support for accommodation retrieval on ad hoc accommodations requests                                                                  |
+    | 1.0         | 03.12.2024   | Added refundable attribute to ad hoc accommodation                                                                                           |
+    | 1.0         | 18.12.2024   | Added sourcesAndProviders array to the Accommodation model and deduplicated accommodation alternative offers                                 |
+    | 1.0         | 18.12.2024   | Removed version from base path and added v1 to each endpoint and v2 to new ad-hoc accommodation endpoints                                    |
 
     # Authentication
     Authenticate your account when using the API by including your secret API key in the request.
@@ -143,7 +137,7 @@ securityDefinitions:
 # To apply Basic auth to the whole API:
 security:
   - basicAuth: []
-basePath: /planner/v1/itineraries
+basePath: /planner
 tags:
   - name: Itinerary
     description: |
@@ -294,7 +288,7 @@ parameters:
     type: string
     required: true
 paths:
-  /price-probing:
+  /v1/itineraries/price-probing:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/includeParam'
@@ -321,7 +315,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryPriceProbingResponse'
 
-  /{itineraryId}:
+  /v1/itineraries/{itineraryId}:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -368,7 +362,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/title:
+  /v1/itineraries/{itineraryId}/title:
     put:
       summary: Change title
       description: |
@@ -402,7 +396,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/duplicate:
+  /v1/itineraries/{itineraryId}/duplicate:
     post:
       summary: Duplicates this itinerary
       description: |
@@ -437,7 +431,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/start-date:
+  /v1/itineraries/{itineraryId}/start-date:
     post:
       summary: Change start date
       description: Changes the start date on the itinerary identified by the given ID.
@@ -470,7 +464,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/legs/{legId}/stop/nights:
+  /v1/itineraries/{itineraryId}/legs/{legId}/stop/nights:
     post:
       summary: Change stop duration
       description: |
@@ -508,7 +502,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/undo:
+  /v1/itineraries/{itineraryId}/undo:
     post:
       summary: Undo last change
       description: |
@@ -538,7 +532,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/room-preferences:
+  /v1/itineraries/{itineraryId}/room-preferences:
     put:
       summary: Update room preferences
       description: |
@@ -569,7 +563,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/accommodations:
+  /v1/itineraries/{itineraryId}/accommodations:
     get:
       summary: Get added hotels
       description: |
@@ -596,7 +590,7 @@ paths:
           schema:
             $ref: '#/definitions/AccommodationComponentsResponse'
 
-  /{itineraryId}/accommodations/alternatives:
+  /v1/itineraries/{itineraryId}/accommodations/alternatives:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -656,7 +650,7 @@ paths:
           schema:
             $ref: '#/definitions/AccommodationAlternativesResponse'
 
-  /{itineraryId}/accommodations/offers:
+  /v1/itineraries/{itineraryId}/accommodations/offers:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -722,7 +716,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/accommodations/{accommodationId}:
+  /v1/itineraries/{itineraryId}/accommodations/{accommodationId}:
     delete:
       summary: Remove hotel
       description: |
@@ -748,7 +742,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/activities:
+  /v1/itineraries/{itineraryId}/activities:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -798,7 +792,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/activities/{activityId}:
+  /v1/itineraries/{itineraryId}/activities/{activityId}:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -852,7 +846,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/activities/offers:
+  /v1/itineraries/{itineraryId}/activities/offers:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -894,7 +888,7 @@ paths:
           schema:
             $ref: '#/definitions/ActivityOffersResponse'
 
-  /{itineraryId}/activities/offers/{activityId}:
+  /v1/itineraries/{itineraryId}/activities/offers/{activityId}:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -947,7 +941,7 @@ paths:
           schema:
             $ref: '#/definitions/ActivityOfferDetailsResponse'
 
-  /{itineraryId}/transfers:
+  /v1/itineraries/{itineraryId}/transfers:
     get:
       summary: Get added transfers
       description: Returns all transfer components contained in the itinerary
@@ -973,7 +967,7 @@ paths:
           schema:
             $ref: '#/definitions/TransferComponentsResponse'
 
-  /{itineraryId}/transfers/{transferComponentId}:
+  /v1/itineraries/{itineraryId}/transfers/{transferComponentId}:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -999,7 +993,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/transfers/{transferComponentId}/offers:
+  /v1/itineraries/{itineraryId}/transfers/{transferComponentId}/offers:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -1052,7 +1046,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/rental-cars:
+  /v1/itineraries/{itineraryId}/rental-cars:
     get:
       summary: Get added rental cars
       description: Returns all rental car components contained in the itinerary
@@ -1107,7 +1101,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/rental-cars/offers:
+  /v1/itineraries/{itineraryId}/rental-cars/offers:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -1138,7 +1132,7 @@ paths:
           schema:
             $ref: '#/definitions/RentalCarsOffersResponse'
 
-  /{itineraryId}/rental-cars/{rentalCarId}/offers:
+  /v1/itineraries/{itineraryId}/rental-cars/{rentalCarId}/offers:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -1169,7 +1163,7 @@ paths:
           schema:
             $ref: '#/definitions/RentalCarsOffersResponse'
 
-  /{itineraryId}/rental-cars/offers/{offerId}:
+  /v1/itineraries/{itineraryId}/rental-cars/offers/{offerId}:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -1205,7 +1199,7 @@ paths:
           schema:
             $ref: '#/definitions/RentalCarsOfferDetailsResponse'
 
-  /{itineraryId}/rental-cars/{rentalCarId}/offers/{offerId}:
+  /v1/itineraries/{itineraryId}/rental-cars/{rentalCarId}/offers/{offerId}:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -1239,7 +1233,7 @@ paths:
           schema:
             $ref: '#/definitions/RentalCarsOfferDetailsResponse'
 
-  /{itineraryId}/rental-cars/{rentalCarId}/pickup-dropoff/alternatives:
+  /v1/itineraries/{itineraryId}/rental-cars/{rentalCarId}/pickup-dropoff/alternatives:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -1266,7 +1260,7 @@ paths:
           schema:
             $ref: '#/definitions/RentalCarPuDoAlternativesResponse'
 
-  /{itineraryId}/rental-cars/{rentalCarId}:
+  /v1/itineraries/{itineraryId}/rental-cars/{rentalCarId}:
     delete:
       summary: Remove rental car
       description: Deletes rental car component with the given ID from the itinerary
@@ -1290,7 +1284,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/generic-ad-hoc-components:
+  /v1/itineraries/{itineraryId}/generic-ad-hoc-components:
     get:
       summary: Get generic ad-hocs
       description: Returns all generic ad-hoc components contained in the itinerary
@@ -1338,7 +1332,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/generic-ad-hoc-components/{componentRefId}:
+  /v1/itineraries/{itineraryId}/generic-ad-hoc-components/{componentRefId}:
     put:
       summary: Update generic ad-hoc
       description: |
@@ -1397,7 +1391,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/activity-ad-hoc-components:
+  /v1/itineraries/{itineraryId}/activity-ad-hoc-components:
     get:
       summary: Get activity ad-hocs
       description: Returns all activity ad-hoc components contained in the itinerary
@@ -1445,7 +1439,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/activity-ad-hoc-components/bookings/{componentSource}/{bookingId}:
+  /v1/itineraries/{itineraryId}/activity-ad-hoc-components/bookings/{componentSource}/{bookingId}:
     get:
       summary: Get a list of activities ad-hocs available for importing
       description: Returns a list of ids and titles of activity ad-hoc available for importing from an external system
@@ -1465,7 +1459,7 @@ paths:
           schema:
             $ref: '#/definitions/ActivityAdHocComponentsImportListResponse'
 
-  /{itineraryId}/activity-ad-hoc-components/bookings/{componentSource}/{bookingId}/details/{activityIds}:
+  /v1/itineraries/{itineraryId}/activity-ad-hoc-components/bookings/{componentSource}/{bookingId}/details/{activityIds}:
     get:
       summary: Fetch a list of details of activities ad-hocs
       description: Fetches a list of details of activities ad-hocs from the external system
@@ -1494,7 +1488,7 @@ paths:
           schema:
             $ref: '#/definitions/ActivityAdHocComponentsImportDetailsResponse'
 
-  /{itineraryId}/activity-ad-hoc-components/{componentRefId}:
+  /v1/itineraries/{itineraryId}/activity-ad-hoc-components/{componentRefId}:
     put:
       summary: Update ad-hoc activity
       description: |
@@ -1553,7 +1547,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/rental-car-ad-hoc-components:
+  /v1/itineraries/{itineraryId}/rental-car-ad-hoc-components:
     get:
       summary: Get ad-hoc rental cars
       description: Returns all ad-hoc rental car components contained in the itinerary.
@@ -1602,7 +1596,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/rental-car-ad-hoc-components/{componentRefId}:
+  /v1/itineraries/{itineraryId}/rental-car-ad-hoc-components/{componentRefId}:
     put:
       summary: Update ad-hoc rental car
       description: Update the ad-hoc rental car component identified by `componentRefId`.
@@ -1643,7 +1637,7 @@ paths:
         204:
           description: The ad-hoc rental car component was deleted successfully.
 
-  /{itineraryId}/rental-car-ad-hoc-components/bookings/{componentSource}/{bookingId}:
+  /v1/itineraries/{itineraryId}/rental-car-ad-hoc-components/bookings/{componentSource}/{bookingId}:
     get:
       summary: Get a list of rental car ad-hocs available for importing
       description: Returns a list of ids and titles of rental car ad-hoc available for importing from an external system
@@ -1663,7 +1657,7 @@ paths:
           schema:
             $ref: '#/definitions/ActivityAdHocComponentsImportListResponse'
 
-  /{itineraryId}/rental-car-ad-hoc-components/bookings/{componentSource}/{bookingId}/details/{rentalcarIds}:
+  /v1/itineraries/{itineraryId}/rental-car-ad-hoc-components/bookings/{componentSource}/{bookingId}/details/{rentalcarIds}:
     get:
       summary: Fetch a list of details of rental car ad-hocs
       description: Fetches a list of details of rental car ad-hocs from the external system
@@ -1692,7 +1686,7 @@ paths:
           schema:
             $ref: '#/definitions/ActivityAdHocComponentsImportDetailsResponse'
 
-  /{itineraryId}/transport-ad-hoc-components:
+  /v1/itineraries/{itineraryId}/transport-ad-hoc-components:
     get:
       summary: Get transport ad-hoc components
       description: Returns all transport ad-hoc components contained in the itinerary
@@ -1739,7 +1733,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/transport-ad-hoc-components/{componentRefId}:
+  /v1/itineraries/{itineraryId}/transport-ad-hoc-components/{componentRefId}:
     put:
       summary: Update ad-hoc transport
       description: |
@@ -1798,7 +1792,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/accommodation-ad-hoc-components:
+  /v1/itineraries/{itineraryId}/accommodation-ad-hoc-components:
     get:
       summary: Get accommodation ad-hoc components
       description: Returns all accommodation ad-hoc components contained in the itinerary
@@ -1845,7 +1839,38 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/accommodation-ad-hoc-components/{componentRefId}:
+  /v2/itineraries/{itineraryId}/accommodation-ad-hoc-components:
+    post:
+      summary: Add ad-hoc accommodation
+      description: |
+        Adds a new accommodation ad-hoc component to the itinerary
+      tags:
+        - Ad-Hoc
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/versionParam'
+        - $ref: '#/parameters/itineraryIdParam'
+        - name: data
+          description: |
+            The request contains the accommodation ad-hoc component information used to create
+            and insert them into the itinerary.
+          in: body
+          schema:
+            $ref: '#/definitions/AccommodationAdHocComponentUpsertRequest'
+      responses:
+        200:
+          description: |
+            Returns an AccommodationAdHocComponentsResponse object containing the updated AhHoc Accommodation as well as a meta
+            object holding additional information and/or warnings
+          schema:
+            $ref: '#/definitions/AccommodationAdHocComponentsResponse'
+        400:
+          description: The request was invalid
+          schema:
+            $ref: '#/definitions/ProblemResponse'
+
+  /v1/itineraries/{itineraryId}/accommodation-ad-hoc-components/{componentRefId}:
     put:
       summary: Update ad-hoc accommodation
       description: |
@@ -1904,7 +1929,39 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/base-services:
+  /v2/itineraries/{itineraryId}/accommodation-ad-hoc-components/{componentRefId}:
+    put:
+      summary: Update ad-hoc accommodation
+      description: |
+        Updates an accommodation ad-hoc component in the itinerary
+      tags:
+        - Ad-Hoc
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/versionParam'
+        - $ref: '#/parameters/itineraryIdParam'
+        - $ref: '#/parameters/componentRefIdParam'
+        - name: data
+          description: |
+            The request contains the accommodation ad-hoc component information used to replace
+            the existing one
+          in: body
+          schema:
+            $ref: '#/definitions/AccommodationAdHocComponentUpsertRequest'
+      responses:
+        200:
+          description: |
+            Returns an AccommodationAdHocComponentsResponse object containing the updated AhHocAccommodation as well as a meta
+            object holding addition information and/or warnings
+          schema:
+            $ref: '#/definitions/AccommodationAdHocComponentsResponse'
+        400:
+          description: The request was invalid
+          schema:
+            $ref: '#/definitions/ProblemResponse'
+
+  /v1/itineraries/{itineraryId}/base-services:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -1946,7 +2003,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/base-services/{baseServiceId}:
+  /v1/itineraries/{itineraryId}/base-services/{baseServiceId}:
     delete:
       summary: Remove base service
       description: |
@@ -1971,7 +2028,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/base-services/offers:
+  /v1/itineraries/{itineraryId}/base-services/offers:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -2003,7 +2060,7 @@ paths:
           schema:
             $ref: '#/definitions/BaseServiceOffersResponse'
 
-  /{itineraryId}/modules/{moduleId}/alternatives:
+  /v1/itineraries/{itineraryId}/modules/{moduleId}/alternatives:
     get:
       summary: Get alternative modules
       description: |
@@ -2028,7 +2085,7 @@ paths:
           schema:
             $ref: '#/definitions/ExchangeModulesAlternativesResponse'
 
-  /{itineraryId}/modules/{moduleId}/exchange:
+  /v1/itineraries/{itineraryId}/modules/{moduleId}/exchange:
     post:
       summary: Replace module
       description: |
@@ -2062,7 +2119,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/modules/{moduleId}/use-default-extension:
+  /v1/itineraries/{itineraryId}/modules/{moduleId}/use-default-extension:
     post:
       summary: Revert to default module
       description: |
@@ -2082,7 +2139,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/modules/{moduleId}/route:
+  /v1/itineraries/{itineraryId}/modules/{moduleId}/route:
     get:
       summary: Get route
       description: |
@@ -2142,7 +2199,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/recheck:
+  /v1/itineraries/{itineraryId}/recheck:
     post:
       summary: Recheck availabilities
       description: |
@@ -2178,7 +2235,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/transports:
+  /v1/itineraries/{itineraryId}/transports:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -2252,7 +2309,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/transports/{transportId}:
+  /v1/itineraries/{itineraryId}/transports/{transportId}:
     delete:
       summary: Remove transport
       description: |
@@ -2284,7 +2341,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/transports/bags:
+  /v1/itineraries/{itineraryId}/transports/bags:
     post:
       summary: Add bags to transport
       description: |
@@ -2320,7 +2377,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/transports/general-rules:
+  /v1/itineraries/{itineraryId}/transports/general-rules:
     get:
       summary: Get fare rules
       description: Returns the fare rules of transports
@@ -2337,7 +2394,7 @@ paths:
           schema:
             $ref: '#/definitions/TransportGeneralRulesResponse'
 
-  /{itineraryId}/transports/pull-pnr:
+  /v1/itineraries/{itineraryId}/transports/pull-pnr:
     post:
       summary: Imports a PNR
       description: |
@@ -2367,7 +2424,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/transport-class-upgrade-options:
+  /v1/itineraries/{itineraryId}/transport-class-upgrade-options:
     get:
       summary: Gets transport class upgrade options
       description: Gets the available flight upgrade options for the transports currently found on the itinerary
@@ -2417,7 +2474,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/customer:
+  /v1/itineraries/{itineraryId}/customer:
     get:
       summary: Get customer details
       description: |
@@ -2460,7 +2517,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/pax-details:
+  /v1/itineraries/{itineraryId}/pax-details:
     get:
       summary: Get PAX details
       description: |
@@ -2504,7 +2561,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/remarks:
+  /v1/itineraries/{itineraryId}/remarks:
     put:
       summary: Update general remarks
       description: |
@@ -2532,7 +2589,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/legs/{legId}/stop/remarks:
+  /v1/itineraries/{itineraryId}/legs/{legId}/stop/remarks:
     put:
       summary: Update stop remarks
       description: |
@@ -2561,7 +2618,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/accommodations/{componentRefId}/remarks:
+  /v1/itineraries/{itineraryId}/accommodations/{componentRefId}/remarks:
     put:
       summary: Update hotel remarks
       description: |
@@ -2590,7 +2647,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/activities/{componentRefId}/remarks:
+  /v1/itineraries/{itineraryId}/activities/{componentRefId}/remarks:
     put:
       summary: Update activity remarks
       description: |
@@ -2619,7 +2676,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/transfers/{componentRefId}/remarks:
+  /v1/itineraries/{itineraryId}/transfers/{componentRefId}/remarks:
     put:
       summary: Update transfer remarks
       description: |
@@ -2648,7 +2705,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/transports/{componentRefId}/remarks:
+  /v1/itineraries/{itineraryId}/transports/{componentRefId}/remarks:
     put:
       summary: Update transport remarks
       description: |
@@ -2677,7 +2734,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/rental-cars/{componentRefId}/remarks:
+  /v1/itineraries/{itineraryId}/rental-cars/{componentRefId}/remarks:
     put:
       summary: Update rental car remarks
       description: |
@@ -2706,7 +2763,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/upgrade-references:
+  /v1/itineraries/{itineraryId}/upgrade-references:
     post:
       summary: Upgrades the template and product references
       description: |
@@ -2735,7 +2792,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/managed-service-levels:
+  /v1/itineraries/{itineraryId}/managed-service-levels:
     post:
       summary: Recreates the accommodation components for the new service level
       description: |
@@ -2784,7 +2841,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/upsell-items/travel-documentation/offers:
+  /v1/itineraries/{itineraryId}/upsell-items/travel-documentation/offers:
     post:
       summary: Updates display config of upsell item offers in travel documentation
       description: |
@@ -2822,7 +2879,7 @@ paths:
   #
   #################################################################################################
 
-  /{itineraryId}/transports/locations:
+  /v1/itineraries/{itineraryId}/transports/locations:
     get:
       deprecated: true
       summary: Get locations
@@ -2851,7 +2908,7 @@ paths:
           schema:
             $ref: '#/definitions/TransportLocationsResponse'
 
-  /{itineraryId}/flights/{componentRefId}/remarks:
+  /v1/itineraries/{itineraryId}/flights/{componentRefId}/remarks:
     put:
       deprecated: true
       summary: Update flight remarks
@@ -2883,7 +2940,7 @@ paths:
           schema:
             $ref: '#/definitions/ProblemResponse'
 
-  /{itineraryId}/flights:
+  /v1/itineraries/{itineraryId}/flights:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -2906,7 +2963,7 @@ paths:
           schema:
             $ref: '#/definitions/FlightComponentsResponse'
 
-  /{itineraryId}/flights/{flightId}:
+  /v1/itineraries/{itineraryId}/flights/{flightId}:
     delete:
       deprecated: true
       summary: Remove flight
@@ -2934,7 +2991,7 @@ paths:
           schema:
             $ref: '#/definitions/ItineraryResponse'
 
-  /{itineraryId}/flights/offers:
+  /v1/itineraries/{itineraryId}/flights/offers:
     parameters:
       - $ref: '#/parameters/versionParam'
       - $ref: '#/parameters/itineraryIdParam'
@@ -4048,6 +4105,16 @@ definitions:
         enum: *BookingStatus
         description: |
           The state of the booking
+      refundable:
+        type: boolean
+        description: |
+          Whether the accommodation is refundable or not
+      pictures:
+        type: array
+        items:
+          $ref: '#/definitions/Picture'
+        description: |
+          Pictures of the accommodation
 
   OccupancyBasedActivityRoomDimensionUpsertRequest:
     type: object
@@ -5246,6 +5313,7 @@ definitions:
       - externalRefs
       - isOnRequest
       - recommended
+      - sourcesAndProviders
     properties:
       id:
         type: string
@@ -5288,15 +5356,23 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/Picture'
+      sourcesAndProviders:
+        type: array
+        description: |
+          A list of sources and providers for this accommodation offer:
+          - Source refers to which system the offer was sourced from
+          - Provider refers to the provider from within the source. This is particularly useful when dealing with aggregators such as TravelGateX and iVectorOne.
+          Example: Source is TravelGateX and Provider is Hotelbeds.
+        items:
+          $ref: '#/definitions/SourceAndProvider'
       source:
         type: string
         description: |
-          The offer source which can be used when searching for the offer details.
+          Deprecated in favour of sourcesAndProviders.
       provider:
         type: string
         description: |
-          The offer provider from within the source. This is particularly useful when dealing with aggregators such as TravelGateX and iVectorOne.
-          Example - Source is TravelGateX and Provider is Hotelbeds.
+          Deprecated in favour of sourcesAndProviders.
         example: 'Hotelbeds'
       rooms:
         type: array
@@ -5573,6 +5649,16 @@ definitions:
           - TrustYou
           - Priceline
       rating:
+        type: string
+
+  SourceAndProvider:
+    type: object
+    required:
+      - source
+    properties:
+      source:
+        type: string
+      provider:
         type: string
 
   ActivityInterestCategory:
@@ -7416,6 +7502,16 @@ definitions:
         enum: *BookingStatus
         description: |
           The state of the booking
+      refundable:
+        type: boolean
+        description: |
+          Whether the accommodation is refundable or not
+      pictures:
+        type: array
+        items:
+          $ref: '#/definitions/Picture'
+        description: |
+          Pictures of the accommodation
 
   SimpleTransportComponent:
     type: object
@@ -8488,6 +8584,14 @@ definitions:
     properties:
       attribution:
         type: string
+      attributionAuthor:
+        type: string
+      licenseHolderRefId:
+        type: string
+      restrictedUse:
+        type: boolean
+      source:
+        type: string
 
   Picture:
     type: object
@@ -8507,6 +8611,14 @@ definitions:
         '$ref': '#/definitions/LicenceInfo'
       isExternalAsset:
         type: boolean
+      refId:
+        type: string
+      titlePicture:
+        type: boolean
+      items:
+        type: array
+        items:
+          '$ref': '#/definitions/PictureItem'
 
   PictureItem:
     type: object
@@ -8529,6 +8641,12 @@ definitions:
       sizeInKb:
         type: integer
         format: int64
+      assetType:
+        type: string
+      dimension:
+        type: string
+      originUrl:
+        type: string
     example:
       height: 599
       name: 'fw_wi4wwv6ybf3k.jpg'

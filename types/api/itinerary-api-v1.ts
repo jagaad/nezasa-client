@@ -9,6 +9,39 @@
  * ---------------------------------------------------------------
  */
 
+export interface MagicLinkRequest {
+	/**
+	 * The target URL. Supports relative and absolute URLs. If a relative URL was used as input,
+	 * the endpoint will return a relative URL as output, and vice versa.
+	 * @example "/planner-copilot?q=3%20days%20italy"
+	 */
+	targetUrl: string;
+	/**
+	 * The ID of the agency for which to create the magic link.
+	 * @example "agency123"
+	 */
+	agencyRefId: string;
+}
+
+export interface MagicLinkResponse {
+	/**
+	 * The target URL including the authentication token. The URL is relative if the input target URL
+	 * was relative, and absolute if the input target URL was absolute.
+	 * @example "/auth/token?t=HfjhzGr9NXxenLAiaJdijqvmfRJqVw8dwieKMccRwZET0UvhziNqc9zOVDZ3Tt3hze59fNHayYsk&nz-redirect=%252Fplanner-copilot%253Fq%253D3%252520days%252520italy"
+	 */
+	magicLinkUrl: string;
+	/**
+	 * ISO-formatted timestamp when the token was created.
+	 * @example "2025-01-01T10:00:00.000Z"
+	 */
+	creationTime?: string;
+	/**
+	 * ISO-formatted timestamp when the token will expire.
+	 * @example "2025-01-01T11:00:00.000Z"
+	 */
+	expirationTime?: string;
+}
+
 /** Pull PNR Itinerary Request */
 export interface FromPullPnrRequest {
 	/** List of itinerary segments */
@@ -583,11 +616,27 @@ export interface InstantiationHint {
  */
 export interface ClientMeta {
 	/** @example "toma/vista" */
-	client?: string;
+	client: string;
 	/** @example "BA" */
-	clientAction?: string;
+	clientAction: string;
 	/** @example "107949" */
-	agency?: string;
+	agency: string;
+	/**
+	 * The optional meta payload of the client meta in case the client is Atcom.
+	 * Make sure to set the `client` attribute to `atcom` in this case.
+	 */
+	atcom?: AtcomClientMetaPayload;
+}
+
+/**
+ * The optional meta payload of the client meta in case the client is Atcom.
+ * Make sure to set the `client` attribute to `atcom` in this case.
+ */
+export interface AtcomClientMetaPayload {
+	callbackUrl: string;
+	basketKey: string;
+	stateId: string;
+	bookingReference?: string;
 }
 
 /**

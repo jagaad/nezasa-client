@@ -72,6 +72,7 @@ export interface ContactInfo {
 	email?: string;
 	mobilePhone?: string;
 	taxNumber?: string | null;
+	localIdNumber?: string | null;
 }
 
 /** Detailed passenger information including personal details, travel documents, and contact information. Each passenger must have a unique refId. */
@@ -105,14 +106,22 @@ export interface PaxInfo {
 
 export interface UpsellItemOffer {
 	offerId: string;
+	productId: string;
 	name: string;
 	description: string;
+	/** A list of URLs to pictures of the upsell item offer */
+	pictures: {
+		caption?: string;
+		url: string;
+		thumbnail: string;
+	}[];
 	serviceCategories: ServiceCategoryOffer[];
 }
 
 export interface ServiceCategoryOffer {
 	serviceCategoryRefId: string;
 	name: string;
+	priceType: string;
 	salesPrice: MonetaryValue;
 }
 
@@ -135,6 +144,10 @@ export interface UpsellItemOfferSelection {
 export interface UpsellItem {
 	/** The component unique identifier */
 	componentRefId: string;
+	/** The product unique identifier */
+	productRefId: string;
+	/** The service category ref ID */
+	serviceCategoryRefId: string;
 	/** The name of the Upsell Item */
 	name: string;
 	/** A description for any additional information about the item */
@@ -302,19 +315,55 @@ export interface TravelAgencyDetails {
 	refId: string;
 }
 
-export interface OptIns {
-	/** The contact information for the user */
-	contactInfo?: {
-		/** The user email to opt-in to marketing communications */
-		email?: string;
-	};
-	optIns: OptInChannel[];
+/**
+ * Represents a specific opt-in channel and its consent status. Currently only supports newsletter opt-ins
+ * via email channel. While the schema is designed for future expansion, at present:
+ * - Only Newsletter type is supported
+ * - Only email channel is supported
+ */
+export interface OptInChannel {
+	/**
+	 * The type of opt-in. Currently only supports Newsletter, but designed for future expansion
+	 * to accommodate additional opt-in types.
+	 */
+	type: 'Newsletter';
+	/** Whether the user has given consent for this opt-in channel */
+	consent: boolean;
+	/**
+	 * The channel for this opt-in. Currently only 'email' is supported.
+	 * Value is case-insensitive.
+	 */
+	channel: string;
 }
 
-export interface OptInChannel {
-	type: 'Newsletter';
-	consent: boolean;
-	channel: string;
+/**
+ * Contact information specifically for opt-ins. Required when giving consent to certain
+ * opt-in types (e.g., email is required for Newsletter type).
+ */
+export interface OptInsContactInfo {
+	/**
+	 * Email address for the opt-in contact. Required for Newsletter type.
+	 * @format email
+	 */
+	email?: string;
+}
+
+/**
+ * Container for opt-in preferences and associated contact information.
+ *
+ * ## Limitations
+ * - Each opt-in type can only appear once in the list
+ * - For Newsletter type, email contact information is required when consent is true
+ * - Removing consent (setting to false) does not require contact information
+ */
+export interface OptIns {
+	/** List of opt-in channels and their consent status */
+	optIns: OptInChannel[];
+	/**
+	 * Contact information specifically for opt-ins. Required when giving consent to certain
+	 * opt-in types (e.g., email is required for Newsletter type).
+	 */
+	contactInfo?: OptInsContactInfo;
 }
 
 export interface TermsAndConditions {
@@ -370,6 +419,13 @@ export interface CheckoutDetails {
 	checkoutState: string;
 	/** The external booking ID, if any */
 	externalBookingId?: string;
+	/**
+	 * The end of the booking window for the itinerary. This is the latest date
+	 * the itinerary can be booked.
+	 * @format date
+	 * @example "2017-12-31"
+	 */
+	bookingWindowEnd: string;
 	termsAndConditions: TermsAndConditions;
 	/**
 	 * This view object is a representation of our Itinerary model. It provides callers with
@@ -394,6 +450,14 @@ export interface CheckoutDetails {
 	insurances: InsuranceAdHocComponentResponse[];
 	paymentTransactions: PaymentTransaction[];
 	upsellItems: UpsellItem[];
+	/**
+	 * Container for opt-in preferences and associated contact information.
+	 *
+	 * ## Limitations
+	 * - Each opt-in type can only appear once in the list
+	 * - For Newsletter type, email contact information is required when consent is true
+	 * - Removing consent (setting to false) does not require contact information
+	 */
 	optIns: OptIns;
 	travelAgency: TravelAgencyDetails;
 }
@@ -598,6 +662,8 @@ export interface AvailabilityComponent {
 	previousPrice?: MonetaryValue;
 	/** A localized name representing the component, e.g., the hotel or activity name. */
 	name?: string;
+	/** A localized name representing the service level of the component, e.g., the hotel room. */
+	serviceLevelName?: string;
 	/**
 	 * A "full-date" as defined by https://www.rfc-editor.org/rfc/rfc3339#section-5.6 using the format 2017-12-31
 	 * representing the start date of component if applicable, e.g., hotel check-in date.
@@ -619,6 +685,12 @@ export interface AvailabilityComponent {
 	 * redirect back is needed.
 	 */
 	alternativesSearchUrl?: string;
+	/** Whether the component is currently booked or not. */
+	isBooked: boolean;
+	/** Whether the component is currently on request or not. */
+	isOnRequest: boolean;
+	/** Whether the component is currently a placeholder or not. */
+	isPlaceholder: boolean;
 }
 
 export interface AvailabilityCheckResponse {
@@ -648,7 +720,17 @@ export interface BookingResponse {
 }
 
 export interface StartBookingResponse {
-	status: string;
+	status?: string;
+	/**
+	 * This view object is a representation of our Itinerary model. It provides callers with
+	 * the structure as well as pertinent information pertaining to their entire trip.
+	 */
+	itinerary?: Itinerary;
+	/**
+	 * The object containing various aspects of the itinerary recheck, such
+	 * as rechecked components and general recheck remarks.
+	 */
+	summary?: AvailabilitySummary;
 }
 
 /** Traveler details */
@@ -700,6 +782,11 @@ export interface RequiredTravelerFields {
 		dateOfBirth?: RequiredTravelerFieldType;
 		passportExpirationDate?: RequiredTravelerFieldType;
 		passportIssuingCountry?: RequiredTravelerFieldType;
+		address1?: RequiredTravelerFieldType;
+		address2?: RequiredTravelerFieldType;
+		postalCode?: RequiredTravelerFieldType;
+		city?: RequiredTravelerFieldType;
+		country?: RequiredTravelerFieldType;
 	};
 }
 
@@ -717,6 +804,7 @@ export enum RequiredTravelerFieldType {
  */
 export interface ExternallyPaidCharge {
 	name: string;
+	productName: string;
 	value: MonetaryValue;
 }
 

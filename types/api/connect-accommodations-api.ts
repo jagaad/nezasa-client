@@ -354,6 +354,10 @@ export enum Language {
 	Es = 'es',
 	Fi = 'fi',
 	Pt = 'pt',
+	Sv = 'sv',
+	No = 'no',
+	Da = 'da',
+	Pl = 'pl',
 }
 
 /**

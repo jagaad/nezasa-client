@@ -754,6 +754,10 @@ export interface AccommodationAdHocComponentUpsertRequest {
 		| 'NonBookable'
 		| 'Cancelled'
 		| 'None';
+	/** Whether the accommodation is refundable or not */
+	refundable?: boolean;
+	/** Pictures of the accommodation */
+	pictures?: Picture[];
 }
 
 export interface OccupancyBasedActivityRoomDimensionUpsertRequest {
@@ -1548,11 +1552,17 @@ export interface Accommodation {
 	facts?: OfferFact[];
 	ratings?: ProductRating[];
 	pictures?: Picture[];
-	/** The offer source which can be used when searching for the offer details. */
+	/**
+	 * A list of sources and providers for this accommodation offer:
+	 * - Source refers to which system the offer was sourced from
+	 * - Provider refers to the provider from within the source. This is particularly useful when dealing with aggregators such as TravelGateX and iVectorOne.
+	 * Example: Source is TravelGateX and Provider is Hotelbeds.
+	 */
+	sourcesAndProviders: SourceAndProvider[];
+	/** Deprecated in favour of sourcesAndProviders. */
 	source?: string;
 	/**
-	 * The offer provider from within the source. This is particularly useful when dealing with aggregators such as TravelGateX and iVectorOne.
-	 * Example - Source is TravelGateX and Provider is Hotelbeds.
+	 * Deprecated in favour of sourcesAndProviders.
 	 * @example "Hotelbeds"
 	 */
 	provider?: string;
@@ -1707,6 +1717,11 @@ export interface RoomCategoryOffer {
 export interface ProductRating {
 	source: 'TrustYou' | 'Priceline';
 	rating: string;
+}
+
+export interface SourceAndProvider {
+	source: string;
+	provider?: string;
 }
 
 export enum ActivityInterestCategory {
@@ -2803,6 +2818,10 @@ export interface AccommodationAdHocComponent {
 		| 'NonBookable'
 		| 'Cancelled'
 		| 'None';
+	/** Whether the accommodation is refundable or not */
+	refundable?: boolean;
+	/** Pictures of the accommodation */
+	pictures?: Picture[];
 }
 
 /** A transport ad-hoc component used in the itinerary */
@@ -3470,6 +3489,10 @@ export interface PricingCoordinates {
 /** Contains the licence data for a picture */
 export interface LicenceInfo {
 	attribution: string;
+	attributionAuthor?: string;
+	licenseHolderRefId?: string;
+	restrictedUse?: boolean;
+	source?: string;
 }
 
 /** Defines a view of our Picture model along with its descriptions */
@@ -3482,6 +3505,9 @@ export interface Picture {
 	/** Contains the licence data for a picture */
 	licenceInfo?: LicenceInfo;
 	isExternalAsset?: boolean;
+	refId?: string;
+	titlePicture?: boolean;
+	items?: PictureItem[];
 }
 
 /** @example {"height":599,"name":"fw_wi4wwv6ybf3k.jpg","sizeInKb":134,"url":"https://s3-eu-west-1.amazonaws.com/nezasa-dev/pictures/fw_wi4wwv6ybf3k.jpg","width":800} */
@@ -3494,6 +3520,9 @@ export interface PictureItem {
 	height: number;
 	/** @format int64 */
 	sizeInKb?: number;
+	assetType?: string;
+	dimension?: string;
+	originUrl?: string;
 }
 
 /** Describes booking information available in a component. */

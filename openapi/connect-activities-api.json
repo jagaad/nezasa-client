@@ -535,7 +535,20 @@
 			"Language": {
 				"default": "de",
 				"description": "2-letter code (ISO 639-1)",
-				"enum": ["de", "en", "fr", "it", "nl", "es", "fi", "pt"],
+				"enum": [
+					"de",
+					"en",
+					"fr",
+					"it",
+					"nl",
+					"es",
+					"fi",
+					"pt",
+					"sv",
+					"no",
+					"da",
+					"pl"
+				],
 				"example": "de",
 				"title": "Supported languages",
 				"type": "string"

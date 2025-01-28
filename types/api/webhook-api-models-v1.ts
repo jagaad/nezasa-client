@@ -41,6 +41,11 @@ export interface WebhookCreateRequest {
 	)[];
 	/** Describes a target of a webhook call. */
 	target: WebhookTarget;
+	/**
+	 * Determines if the webhook is a reseller webhook. If set to true, webhooks are only triggered for bookings where the webhook owner is the reseller (itinerary owner). If set to false, webhooks are only triggered for bookings which contain one or more components sold by the webhook owner.
+	 * @default true
+	 */
+	reseller?: boolean;
 }
 
 /**
@@ -78,6 +83,11 @@ export interface WebhookUpdateRequest {
 	)[];
 	/** Describes a target of a webhook call. */
 	target?: WebhookTarget;
+	/**
+	 * Determines if the webhook is a reseller webhook. If set to true, webhooks are only triggered for  the reseller's own bookings. If set to false, webhooks are triggered for all bookings which contain components sold by the seller.
+	 * @default true
+	 */
+	reseller?: boolean;
 }
 
 export type WebhookListResponse = WebhookResponse[];
@@ -101,6 +111,11 @@ export interface WebhookResponse {
 	created: string;
 	/** The timestamp when the webhook was modified the last time. A "date-time" as defined by https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#anchor14 */
 	modified: string;
+	/**
+	 * Determines if the webhook is a reseller webhook. If set to true, webhooks are only triggered for  the reseller's own bookings. If set to false, webhooks are triggered for all bookings which contain components sold by the seller.
+	 * @default true
+	 */
+	reseller?: boolean;
 }
 
 /** Describes a target of a webhook call. */
