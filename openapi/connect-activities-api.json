@@ -13,6 +13,9 @@
 	],
 	"security": [
 		{
+			"ApiKeyAuth": []
+		},
+		{
 			"BearerAuth": []
 		}
 	],
@@ -61,7 +64,7 @@
 		},
 		"/v1/login": {
 			"post": {
-				"description": "This endpoint allows a user to authenticate before making any request.\nUpon successful authentication, the endpoint returns a JSON\nresponse with the bearer token. In case of an error, a default error\nresponse is returned.",
+				"description": "[Deprecated] We will use Api-Key header for technical authentication instead.\nThis endpoint allows a user to authenticate before making any request.\nUpon successful authentication, the endpoint returns a JSON\nresponse with the bearer token. In case of an error, a default error\nresponse is returned.",
 				"operationId": "ActivitiesV1_Login",
 				"requestBody": {
 					"content": {
@@ -95,7 +98,7 @@
 						"description": "An unexpected error response."
 					}
 				},
-				"summary": "Obtain Bearer token",
+				"summary": "[Deprecated] Obtain Bearer token",
 				"tags": ["Login, Auth, Authentication"]
 			}
 		},
@@ -103,6 +106,16 @@
 			"post": {
 				"description": "This endpoint allows users to search for bookable activities in the specified period.\nWe expect a single offer for each activity, preferably a basic category offer for an adult.\nA separate call to a different endpoint will fetch the details, including all offers, of the activity.",
 				"operationId": "ActivitiesV1_Offers",
+				"parameters": [
+					{
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -152,6 +165,14 @@
 						"schema": {
 							"type": "string"
 						}
+					},
+					{
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"schema": {
+							"type": "string"
+						}
 					}
 				],
 				"requestBody": {
@@ -194,6 +215,14 @@
 			"delete": {
 				"operationId": "ActivitiesV1_Cancel",
 				"parameters": [
+					{
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"schema": {
+							"type": "string"
+						}
+					},
 					{
 						"description": "The booking identifier",
 						"in": "query",
@@ -252,6 +281,16 @@
 			"post": {
 				"description": "This endpoint allows a user to book an activity using various parameters.\nUpon successful booking, the endpoint returns a JSON\nresponse with booking details. In case of an error, a default error\nresponse is returned.",
 				"operationId": "ActivitiesV1_Book",
+				"parameters": [
+					{
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -292,6 +331,14 @@
 			"post": {
 				"operationId": "ActivitiesV1_CheckAvailability",
 				"parameters": [
+					{
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"schema": {
+							"type": "string"
+						}
+					},
 					{
 						"description": "The reference of the offer. This value is returned by ActivityOffer message.",
 						"in": "path",
@@ -343,6 +390,14 @@
 				"description": "Fetch a list of already booked activities for the given booking that\ncan be pulled from the provider.",
 				"operationId": "ActivitiesV1_GetBooking",
 				"parameters": [
+					{
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"schema": {
+							"type": "string"
+						}
+					},
 					{
 						"description": "Generic ID of the booking in system. A single booking may contain more than one activity/tickets booked.\n",
 						"in": "query",
@@ -400,6 +455,14 @@
 				"description": "Fetch details of an already booked activities from the provider.",
 				"operationId": "ActivitiesV1_BookingDetails",
 				"parameters": [
+					{
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"in": "header",
+						"name": "Contract-Id",
+						"schema": {
+							"type": "string"
+						}
+					},
 					{
 						"description": "Generic ID of the booking in system. A single booking may contain more than one activity/tickets booked.\n",
 						"in": "query",
@@ -4239,8 +4302,15 @@
 		"securitySchemes": {
 			"BearerAuth": {
 				"bearerFormat": "JWT",
+				"description": "[Deprecated] Use Api-Key instead.",
 				"scheme": "bearer",
 				"type": "http"
+			},
+			"ApiKeyAuth": {
+				"description": "Api-Key for technical authentication of Nezasa with Supplier. Issued by Supplier.",
+				"in": "header",
+				"name": "Api-Key",
+				"type": "apiKey"
 			}
 		}
 	}

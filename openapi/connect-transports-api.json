@@ -68,7 +68,7 @@
 				"operationId": "TransportsV1_Offers",
 				"parameters": [
 					{
-						"description": "Customer Identifier (think: account, username, login) which triggers specific specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
 						"in": "header",
 						"name": "Contract-Id",
 						"required": true,
@@ -119,7 +119,7 @@
 				"operationId": "TransportsV1_Rules",
 				"parameters": [
 					{
-						"description": "Customer Identifier (think: account, username, login) which triggers specific specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
 						"in": "header",
 						"name": "Contract-Id",
 						"required": true,
@@ -179,7 +179,7 @@
 						}
 					},
 					{
-						"description": "Customer Identifier (think: account, username, login) which triggers specific specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
 						"in": "header",
 						"name": "Contract-Id",
 						"required": true,
@@ -230,7 +230,7 @@
 				"operationId": "TransportsV1_Availability",
 				"parameters": [
 					{
-						"description": "Customer Identifier (think: account, username, login) which triggers specific specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
 						"in": "header",
 						"name": "Contract-Id",
 						"required": true,
@@ -290,7 +290,7 @@
 						}
 					},
 					{
-						"description": "Customer Identifier (think: account, username, login) which triggers specific specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
 						"in": "header",
 						"name": "Contract-Id",
 						"required": true,
@@ -341,7 +341,7 @@
 				"operationId": "TransportsV1_Book",
 				"parameters": [
 					{
-						"description": "Customer Identifier (think: account, username, login) which triggers specific specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
 						"in": "header",
 						"name": "Contract-Id",
 						"required": true,
@@ -401,7 +401,7 @@
 						}
 					},
 					{
-						"description": "Customer Identifier (think: account, username, login) which triggers specific specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
 						"in": "header",
 						"name": "Contract-Id",
 						"required": true,
@@ -452,7 +452,7 @@
 				"operationId": "TransportsV1_Cancel",
 				"parameters": [
 					{
-						"description": "Customer Identifier (think: account, username, login) which triggers specific specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
 						"in": "header",
 						"name": "Contract-Id",
 						"required": true,
@@ -512,7 +512,7 @@
 						}
 					},
 					{
-						"description": "Customer Identifier (think: account, username, login) which triggers specific specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
 						"in": "header",
 						"name": "Contract-Id",
 						"required": true,
@@ -563,7 +563,7 @@
 				"operationId": "TransportsV1_Retrieve",
 				"parameters": [
 					{
-						"description": "Customer Identifier (think: account, username, login) which triggers specific specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
 						"in": "header",
 						"name": "Contract-Id",
 						"required": true,
@@ -623,7 +623,7 @@
 						}
 					},
 					{
-						"description": "Customer Identifier (think: account, username, login) which triggers specific specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
+						"description": "Customer Identifier (think: account, username, login) which triggers specific configuration, options or settings.\nIssued by Supplier. No other configuration parameters will be supplied by Nezasa.",
 						"in": "header",
 						"name": "Contract-Id",
 						"required": true,

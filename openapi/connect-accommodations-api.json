@@ -1,7 +1,7 @@
 {
 	"openapi": "3.0.3",
 	"info": {
-		"description": "The connectAPI for accommodations defines a service API that lets users search for, \nview, book, and cancel accommodations via TripBuilder.\n\nKey Features:\n\n1. **Get List of Accommodations**: Retrieves a list of all available accommodations, \n    including basic details like code, room description, and price.\n2. **Get Accommodation Details**: Provides detailed information about a specific \n    accommodation using its reference.\n3. **Check Accommodation Availability**: Shows the current availability status of \n    an accommodation along with its description.\n4. **Book an Accommodation**: Allows users to book an accommodation offer using its \n    reference and user details.\n5. **Cancel Booking**: Enables users to cancel a booking using its booking reference.\n\nThis API is designed to be RESTful, using standard HTTP methods like\nGET, POST, and DELETE, and it primarily exchanges data in JSON format.\n\n### Change History\n\n| API Version | Docs Version | Changes                                                                                                                     |\n|-------------|--------------|-----------------------------------------------------------------------------------------------------------------------------|\n| 1.0         | 31.07.2023   | Initial version                                                                                                             |\n| 1.1         | 05.06.2024   | Extended spec to support Book and Cancel actions                                                                            |\n| 1.2         | 04.10.2024   | Extended spec to split offer between search and details offer.                                                              |\n|             |              | Added support for available board codes and cancellation policies in search offer model.                                    |\n|             |              | Removed deprecated location field from search and details offer                                                             |\n\n### Authentication\nAll API requests must be made over HTTPS.",
+		"description": "The connectAPI for accommodations defines a service API that lets users search for, \nview, book, and cancel accommodations via TripBuilder.\n\nKey Features:\n\n1. **Get List of Accommodations**: Retrieves a list of all available accommodations, \n    including basic details like code, room description, and price.\n2. **Get Accommodation Details**: Provides detailed information about a specific \n    accommodation using its reference.\n3. **Check Accommodation Availability**: Shows the current availability status of \n    an accommodation along with its description.\n4. **Book an Accommodation**: Allows users to book an accommodation offer using its \n    reference and user details.\n5. **Cancel Booking**: Enables users to cancel a booking using its booking reference.\n\nThis API is designed to be RESTful, using standard HTTP methods like\nGET, POST, and DELETE, and it primarily exchanges data in JSON format.\n\n### Change History\n\n| API Version | Docs Version | Changes                                                                                                                     |\n|-------------|--------------|-----------------------------------------------------------------------------------------------------------------------------|\n| 1.0         | 31.07.2023   | Initial version                                                                                                             |\n| 1.1         | 05.06.2024   | Extended spec to support Book and Cancel actions                                                                            |\n| 1.2         | 04.10.2024   | Extended spec to split offer between search and details offer.                                                              |\n|             |              | Added support for available board codes and cancellation policies in search offer model.                                    |\n|             |              | Removed deprecated location field from search and details offer                                                             |\n| 1.3         | 28.01.2025   | Added 'filters' object to AccommodationOffersRequest and AccommodationOfferDetailsRequest                                   |\n|             |              | Updated documentation with supplier currently supported by Nezasa                                                           |\n\n### Authentication\nAll API requests must be made over HTTPS.",
 		"title": "Connect API for Accommodations",
 		"version": "1.2.0"
 	},
@@ -1163,6 +1163,10 @@
 						"pageSize": 6
 					},
 					"boardCodes": ["BB", "BB"],
+					"filters": {
+						"includedSuppliers": ["", ""],
+						"excludedSuppliers": ["", ""]
+					},
 					"lang": "de",
 					"nonRefundable": false,
 					"purchaseChannel": "K"
@@ -1227,6 +1231,9 @@
 						"description": "Channel (in supplier-specific format) via which the content is offered",
 						"example": "K",
 						"type": "string"
+					},
+					"filters": {
+						"$ref": "#/components/schemas/Filters"
 					}
 				},
 				"required": [
@@ -2151,6 +2158,10 @@
 					],
 					"currency": "EUR",
 					"boardCodes": ["BB", "BB"],
+					"filters": {
+						"includedSuppliers": ["", ""],
+						"excludedSuppliers": ["", ""]
+					},
 					"lang": "de",
 					"nonRefundable": false,
 					"purchaseChannel": "K"
@@ -2209,6 +2220,9 @@
 						"description": "Channel (in supplier-specific format) via which the content is offered",
 						"example": "K",
 						"type": "string"
+					},
+					"filters": {
+						"$ref": "#/components/schemas/Filters"
 					}
 				},
 				"required": ["currency", "lang", "period", "roomAllocation"],
@@ -3142,7 +3156,8 @@
 							"email": "mike.riverdance@example.com"
 						}
 					},
-					"lang": "de"
+					"lang": "de",
+					"onRequestWebhookUrl": "onRequestWebhookUrl"
 				},
 				"properties": {
 					"reference": {
@@ -3162,6 +3177,10 @@
 					},
 					"contact": {
 						"$ref": "#/components/schemas/CommonContactDetails"
+					},
+					"onRequestWebhookUrl": {
+						"description": "URL of the webhook endpoint to be used to confirm an on-request booking, i.e. booking which returned a `status` of `OnRequest`\nIn such cases, the webhook should be used to inform the caller once the on-request booking is confirmed to be either booked or unavailable.",
+						"type": "string"
 					},
 					"metadata": {
 						"$ref": "#/components/schemas/Metadata"
@@ -3527,6 +3546,35 @@
 				"title": "Pax allocation in an accommodation",
 				"type": "object"
 			},
+			"Filters": {
+				"description": "Defines filtering options for accommodation offers based on suppliers. \nThis object allows for specifying which suppliers should be included or excluded from the search results,\nproviding more control over the source of accommodation offers.",
+				"example": {
+					"includedSuppliers": ["", ""],
+					"excludedSuppliers": ["", ""]
+				},
+				"properties": {
+					"includedSuppliers": {
+						"description": "Offers returned can only be provided by the included suppliers.",
+						"items": {
+							"description": "The name or a short identification of a specific supplier that could provide the offer. Necessary for the means of offer source identification and\nfiltering. String, not an enum, for quicker enablement.\n\nTrip Builder offers configuration referencing suppliers and sometimes enables supplier-specific content. Therefore, please use identifiers already\npresent in the system, or consult Nezasa for new suppliers. The list of present suppliers:\n\nAlliedTPro, Amadeus, Anixe, AOT, AtCore, ATI, Bonotel, BusyRooms, CMI, Diethelm, Eurotours, Expedia, GetARoom, Hotelbeds, Jonview, Juniper, Limatours, MTSGlobe,\nNWT, Peakwork, Priceline, Ratehawk, Restel, STC, Sunhotels, TBO, TourVest, Travolutionary, Travalco, Travco, W2M, Welcomebeds",
+							"title": "Offer supplier",
+							"type": "String"
+						},
+						"type": "array"
+					},
+					"excludedSuppliers": {
+						"description": "Offers returned must not be provided by the excluded suppliers.",
+						"items": {
+							"description": "The name or a short identification of a specific supplier that could provide the offer. Necessary for the means of offer source identification and\nfiltering. String, not an enum, for quicker enablement.\n\nTrip Builder offers configuration referencing suppliers and sometimes enables supplier-specific content. Therefore, please use identifiers already\npresent in the system, or consult Nezasa for new suppliers. The list of present suppliers:\n\nAlliedTPro, Amadeus, Anixe, AOT, AtCore, ATI, Bonotel, BusyRooms, CMI, Diethelm, Eurotours, Expedia, GetARoom, Hotelbeds, Jonview, Juniper, Limatours, MTSGlobe,\nNWT, Peakwork, Priceline, Ratehawk, Restel, STC, Sunhotels, TBO, TourVest, Travolutionary, Travalco, Travco, W2M, Welcomebeds",
+							"title": "Offer supplier",
+							"type": "String"
+						},
+						"type": "array"
+					}
+				},
+				"title": "Supplier filter",
+				"type": "object"
+			},
 			"AccommodationSearchOffer": {
 				"description": "Representation of an accommodation offer.\nCan be used to return the cheapest offer for an accommodation with additional information about available cancellation policies and board codes.",
 				"example": {
@@ -3699,7 +3747,7 @@
 						"type": "string"
 					},
 					"supplier": {
-						"description": "The name or a short identification of a specific supplier that provided the offer. Necessary for the means of offer source identification and\nfiltering. String, not an enum, for quicker enablement.\n\nTrip Builder offers configuration referencing suppliers and sometimes enables supplier-specific content. Therefore, please use identifiers already\npresent in the system, or consult Nezasa for new suppliers. The list of present suppliers:\n\nAmadeus, Anixe, AOT, AtCore, ATI, Bonotel, CMI, Diethelm, Eurotours, Expedia, ExpediaRapid, GetARoom, Hotelbeds, Jonview, Juniper, Limatours, MTSGlobe,\nNWT, Peakwork, PhoenixUnlimited, Priceline, Ratehawk, Restel, STC, Sunhotels, TBO, TourVest, TourVestPush, Travolutionary, W2M, Welcomebeds, YouTravel",
+						"description": "The name or a short identification of a specific supplier that provided the offer. Necessary for the means of offer source identification and\nfiltering. String, not an enum, for quicker enablement.\n\nTrip Builder offers configuration referencing suppliers and sometimes enables supplier-specific content. Therefore, please use identifiers already\npresent in the system, or consult Nezasa for new suppliers. The list of present suppliers:\n\nAlliedTPro, Amadeus, Anixe, AOT, AtCore, ATI, Bonotel, BusyRooms, CMI, Diethelm, Eurotours, Expedia, GetARoom, Hotelbeds, Jonview, Juniper, Limatours, \nMTSGlobe, NWT, Peakwork, Priceline, Ratehawk, Restel, STC, Sunhotels, TBO, TourVest, Travolutionary, Travalco, Travco, W2M, Welcomebeds",
 						"title": "Offer supplier",
 						"type": "string"
 					},
@@ -3950,7 +3998,7 @@
 						"type": "string"
 					},
 					"supplier": {
-						"description": "The name or a short identification of a specific supplier that provided the offer. Necessary for the means of offer source identification and\nfiltering. String, not an enum, for quicker enablement.\n\nTrip Builder offers configuration referencing suppliers and sometimes enables supplier-specific content. Therefore, please use identifiers already\npresent in the system, or consult Nezasa for new suppliers. The list of present suppliers:\n\nAmadeus, Anixe, AOT, AtCore, ATI, Bonotel, CMI, Diethelm, Eurotours, Expedia, ExpediaRapid, GetARoom, Hotelbeds, Jonview, Juniper, Limatours, MTSGlobe,\nNWT, Peakwork, PhoenixUnlimited, Priceline, Ratehawk, Restel, STC, Sunhotels, TBO, TourVest, TourVestPush, Travolutionary, W2M, Welcomebeds, YouTravel",
+						"description": "The name or a short identification of a specific supplier that provided the offer. Necessary for the means of offer source identification and\nfiltering. String, not an enum, for quicker enablement.\n\nTrip Builder offers configuration referencing suppliers and sometimes enables supplier-specific content. Therefore, please use identifiers already\npresent in the system, or consult Nezasa for new suppliers. The list of present suppliers:\n\nAlliedTPro, Amadeus, Anixe, AOT, AtCore, ATI, Bonotel, BusyRooms, CMI, Diethelm, Eurotours, Expedia, GetARoom, Hotelbeds, Jonview, Juniper, Limatours, \nMTSGlobe, NWT, Peakwork, Priceline, Ratehawk, Restel, STC, Sunhotels, TBO, TourVest, Travolutionary, Travalco, Travco, W2M, Welcomebeds",
 						"title": "Offer supplier",
 						"type": "string"
 					},
