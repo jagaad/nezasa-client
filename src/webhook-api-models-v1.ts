@@ -1,4 +1,7 @@
-import type { WebhookEvent } from './api/webhook-api-models-v1';
+import type {
+	WebhookCreateRequest,
+	WebhookResponse as WebhookResponseApi,
+} from './api/webhook-api-models-v1';
 
 export * from './api/webhook-api-models-v1';
 
@@ -29,12 +32,12 @@ export const WebhookEventEnum = {
 	ping: 'ping',
 } satisfies Record<WebhookEvent, WebhookEvent>;
 
-declare module './api/webhook-api-models-v1' {
-	type WebhookEvent = WebhookCreateRequest['events'][number];
+export type WebhookEvent = WebhookCreateRequest['events'][number];
 
-	interface WebhookResponseEnhanced extends WebhookResponse {
-		events: WebhookEvent[];
-	}
-
-	type WebhookListResponseEnhanced = WebhookResponseEnhanced[];
+// Override the WebhookResponse type to use the WebhookEvent type
+export interface WebhookResponse extends WebhookResponseApi {
+	events: WebhookEvent[];
 }
+
+// Override the WebhookListResponse type to use the WebhookResponse type
+export type WebhookListResponse = WebhookResponse[];

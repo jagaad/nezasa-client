@@ -1,5 +1,3 @@
-import type { WebhookEvent } from './api/webhook-api-models-v1';
-
 export * as AgencyApi from './agency-api';
 export * as CheckoutApiV1 from './checkout-api-v1';
 export * as ConnectAccommodationsApi from './connect-accommodations-api';

@@ -4,8 +4,7 @@
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 0",
 		"postdownload": "prettier --write --ignore-unknown openapi",
-		"postgenerate": "prettier --write --ignore-unknown types",
-		"prebuild": "npm run generate",
+		"postgenerate": "prettier --write --ignore-unknown src",
 		"download": "./scripts/download.sh",
 		"openapi-patches": "./scripts/openapi-patches.sh",
 		"generate": "./scripts/generate-api-types.sh",
@@ -21,64 +20,6 @@
 	],
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"default": "./dist/index.js"
-		},
-		"./agency-api": {
-			"types": "./dist/agency-api.d.ts",
-			"default": "./dist/agency-api.js"
-		},
-		"./checkout-api-v1": {
-			"types": "./dist/checkout-api-v1.d.ts",
-			"default": "./dist/checkout-api-v1.js"
-		},
-		"./connect-accommodations-api": {
-			"types": "./dist/connect-accommodations-api.d.ts",
-			"default": "./dist/connect-accommodations-api.js"
-		},
-		"./connect-activities-api": {
-			"types": "./dist/connect-activities-api.d.ts",
-			"default": "./dist/connect-activities-api.js"
-		},
-		"./connect-transports-api": {
-			"types": "./dist/connect-transports-api.d.ts",
-			"default": "./dist/connect-transports-api.js"
-		},
-		"./inventory-picture-api": {
-			"types": "./dist/inventory-picture-api.d.ts",
-			"default": "./dist/inventory-picture-api.js"
-		},
-		"./inventory-supplier-api": {
-			"types": "./dist/inventory-supplier-api.d.ts",
-			"default": "./dist/inventory-supplier-api.js"
-		},
-		"./itinerary-api-v1": {
-			"types": "./dist/itinerary-api-v1.d.ts",
-			"default": "./dist/itinerary-api-v1.js"
-		},
-		"./location-api-v1": {
-			"types": "./dist/location-api-v1.d.ts",
-			"default": "./dist/location-api-v1.js"
-		},
-		"./payment-transaction-api": {
-			"types": "./dist/payment-transaction-api.d.ts",
-			"default": "./dist/payment-transaction-api.js"
-		},
-		"./planner-api-v1": {
-			"types": "./dist/planner-api-v1.d.ts",
-			"default": "./dist/planner-api-v1.js"
-		},
-		"./template-api-v1": {
-			"types": "./dist/template-api-v1.d.ts",
-			"default": "./dist/template-api-v1.js"
-		},
-		"./webhook-api-models-v1": {
-			"types": "./dist/webhook-api-models-v1.d.ts",
-			"default": "./dist/webhook-api-models-v1.js"
-		}
-	},
 	"keywords": [
 		"api",
 		"client",

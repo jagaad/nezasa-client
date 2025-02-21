@@ -1,8 +1,7 @@
 {
 	"compilerOptions": {
 		"outDir": "dist",
-		"declaration": true,
-		"lib": ["ES2023"],
+		"lib": ["ES2023", "DOM"],
 		"module": "Node16",
 		"target": "ES2023",
 
@@ -11,5 +10,5 @@
 		"skipLibCheck": true,
 		"moduleResolution": "node16"
 	},
-	"include": ["types"]
+	"include": ["src"]
 }
