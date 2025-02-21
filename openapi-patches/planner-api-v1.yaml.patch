@@ -1,0 +1,13 @@
+diff --git a/openapi/planner-api-v1.yaml b/openapi/planner-api-v1.yaml
+index 11c171c..b49d549 100644
+--- a/openapi/planner-api-v1.yaml
++++ b/openapi/planner-api-v1.yaml
+@@ -1987,7 +1987,7 @@ paths:
+       produces:
+         - application/json
+       parameters:
+-        - name: base-service
++        - name: baseService
+           description: |
+             The request contains the base service information used to locate the correct
+             base service product, create a base service component, and insert the component into the

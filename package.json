@@ -7,6 +7,7 @@
 		"postgenerate": "prettier --write --ignore-unknown types",
 		"prebuild": "npm run generate",
 		"download": "./scripts/download.sh",
+		"openapi-patches": "./scripts/openapi-patches.sh",
 		"generate": "./scripts/generate-api-types.sh",
 		"build": "tsup",
 		"release": "np"

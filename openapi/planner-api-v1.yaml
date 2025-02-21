@@ -1987,7 +1987,7 @@ paths:
       produces:
         - application/json
       parameters:
-        - name: base-service
+        - name: baseService
           description: |
             The request contains the base service information used to locate the correct
             base service product, create a base service component, and insert the component into the
